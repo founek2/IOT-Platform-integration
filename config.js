@@ -1,14 +1,8 @@
 module.exports = {
-    API_KEYS: {
-        METEO: 'XXX',
-        SYSTEM: 'XXX',
-        LIGHT: 'XXX',
-    },
-    httpServer: {
-        url: 'https://test.iotplatforma.cloud',
-    },
-    mqttServer: {
-        url: 'mqtts://test.iotplatforma.cloud',
-        port: 8884,
-    },
+    API_KEY_METEO: process.env.API_KEY_METEO,
+    API_KEY_SYSTEM: process.env.API_KEY_SYSTEM,
+    API_KEY_LIGHT: process.env.API_KEY_LIGHT,
+    HTTP_SERVER_URL: process.env.HTTP_SERVER_URL,
+    MQTT_SERVER_URL: process.env.MQTT_SERVER_URL,
+    MQTT_SERVER_PORT: process.env.MQTT_SERVER_PORT,
 }

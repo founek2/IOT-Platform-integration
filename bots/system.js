@@ -3,7 +3,7 @@ const si = require('systeminformation');
 const conf = require("../config")
 
 async function main() {
-    const { topic, client } = await connection(conf.API_KEYS.SYSTEM)
+    const { topic, client } = await connection(conf.API_KEY_SYSTEM)
     console.log("system topic:", topic)
 
     client.on('connect', async function () {

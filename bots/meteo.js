@@ -2,7 +2,7 @@ const connection = require("../lib/connection")
 const conf = require("../config")
 
 async function main() {
-    const { topic, client } = await connection(conf.API_KEYS.METEO)
+    const { topic, client } = await connection(conf.API_KEY_METEO)
     console.log("meteo topic:", topic)
 
     client.on('connect', function () {

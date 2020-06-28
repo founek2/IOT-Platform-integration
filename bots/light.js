@@ -2,7 +2,7 @@ const connection = require("../lib/connection")
 const conf = require("../config")
 
 async function main() {
-    const { topic, client } = await connection(conf.API_KEYS.LIGHT)
+    const { topic, client } = await connection(conf.API_KEY_LIGHT)
     console.log("light topic:", topic)
 
     client.on('connect', function () {
