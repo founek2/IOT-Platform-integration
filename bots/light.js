@@ -25,7 +25,7 @@ async function main() {
                 on: 0
             }
         }))
-        client.publish(topic + "/ack", JSON.stringify({ ack: 1 }))
+
 
         client.subscribe(topic + "/update")
 
