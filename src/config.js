@@ -5,4 +5,5 @@ module.exports = {
     HTTP_SERVER_URL: process.env.HTTP_SERVER_URL,
     MQTT_SERVER_URL: process.env.MQTT_SERVER_URL,
     MQTT_SERVER_PORT: process.env.MQTT_SERVER_PORT,
-}
+    STORAGE_PATH: process.env.STORAGE_PATH,
+};
