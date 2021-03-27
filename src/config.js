@@ -1,9 +1,12 @@
+const path = require('path');
+
+const result = require('dotenv').config({
+	path: path.join(__dirname, '../.env')
+});
+if (result.error) console.error(error);
+
 module.exports = {
-    API_KEY_METEO: process.env.API_KEY_METEO,
-    API_KEY_SYSTEM: process.env.API_KEY_SYSTEM,
-    API_KEY_LIGHT: process.env.API_KEY_LIGHT,
-    HTTP_SERVER_URL: process.env.HTTP_SERVER_URL,
-    MQTT_SERVER_URL: process.env.MQTT_SERVER_URL,
-    MQTT_SERVER_PORT: process.env.MQTT_SERVER_PORT,
-    STORAGE_PATH: process.env.STORAGE_PATH,
+	MQTT_SERVER_URL: result.parsed.MQTT_SERVER_URL,
+	MQTT_SERVER_PORT: Number(result.parsed.MQTT_SERVER_PORT),
+	STORAGE_PATH: result.parsed.STORAGE_PATH
 };
