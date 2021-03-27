@@ -13,12 +13,12 @@ async function main() {
         settable: true,
     });
 
-    node.addProperty({
+    plat.addSensor({
         name: "Aktuální kurz",
         propertyId: "rate",
         dataType: PropertyDataType.float,
         unitOfMeasurement: "$",
-    });
+    })
 
     node.addProperty({
         name: "Poměr",
@@ -44,8 +44,7 @@ async function main() {
     });
 
     function sendRate() {
-        plat.publishData(
-            "center",
+        plat.publishSensorData(
             "rate",
             (Math.random() * 10).toFixed(2).toString()
         );
@@ -62,7 +61,7 @@ async function main() {
         plat.publishData("light", "power", "on");
 
         sendRate();
-        setInterval(sendRate, 10000);
+        setInterval(sendRate, 1000);
         plat.publishData("center", "currency", "ETH");
 
         plat.on("v2/martas/light-411D1/light/power/set", (value) => {

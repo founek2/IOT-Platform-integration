@@ -2,7 +2,6 @@ import { PropertyClass, PropertyDataType, ComponentType } from "./type";
 import * as mqtt from "mqtt";
 import { Node, PropertyArgs } from "./node";
 
-require("dotenv").config();
 const getTopic = require("./getTopic");
 const conf = require("../config");
 const LocalStorage = require("node-localstorage").LocalStorage;
@@ -96,7 +95,7 @@ export class Platform extends events.EventEmitter {
                 client.end();
                 this.forgot();
                 this.connectPairing();
-            }
+            } else console.log("error2", err)
         });
     };
 
@@ -126,6 +125,7 @@ export class Platform extends events.EventEmitter {
 
     connectPairing = async () => {
         return new Promise(async (resolve, reject) => {
+            console.log("conf", conf)
             const client = mqtt.connect(conf.MQTT_SERVER_URL, {
                 username: "guest=" + this.deviceId,
                 password: "guest",
@@ -139,6 +139,9 @@ export class Platform extends events.EventEmitter {
                     qos: 1,
                 },
             });
+            client.on("error", function (err) {
+                console.log("error", err)
+            })
             console.log("connecting as guest");
             client.publish(`${this.getDevicePrefix()}/$state`, "init");
             client.subscribe(`${this.getDevicePrefix()}/$config/apiKey/set`);
