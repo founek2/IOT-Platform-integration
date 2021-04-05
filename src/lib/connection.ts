@@ -1,4 +1,4 @@
-import { PropertyClass, PropertyDataType, ComponentType } from "./type";
+import { PropertyClass, PropertyDataType, ComponentType, DeviceCommand } from "./type";
 import * as mqtt from "mqtt";
 import { Node, PropertyArgs } from "./node";
 
@@ -70,23 +70,46 @@ export class Platform extends events.EventEmitter {
         });
         console.log("connecting as paired device");
         // client.subscribe("v2/device/" + this.deviceId + "/apiKey");
+        client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
 
         // setInterval(() => )
         client.publish(`${this.getDevicePrefix()}/$state`, "ready");
         this.client = client;
-        this.emit("connect", client);
 
-        this.nodes.forEach(({ componentType, nodeId }) => {
-            if (componentType !== ComponentType.sensor)
-                client.subscribe(`${this.getDevicePrefix()}/${nodeId}/+/set`);
+        this.nodes.forEach(({ nodeId, properties }) => {
+            properties.forEach(({ propertyId, settable }) => {
+                if (settable)
+                    client.subscribe(`${this.getDevicePrefix()}/${nodeId}/${propertyId}/set`);
+            })
         });
+
         client.on("message", (topic, data) => {
-            if (topic.startsWith(this.getDevicePrefix()))
-                this.emit(
-                    topic.slice(this.getDevicePrefix().length),
-                    data.toString()
-                );
-            else this.emit(topic, data.toString());
+            const message = data.toString()
+            console.log("message", topic, message)
+            if (topic === `${this.getDevicePrefix()}/$cmd/set`) {
+                if (message === DeviceCommand.restart) {
+                    console.log("Reseting...")
+                    client.end();
+                    this.connect();
+                } else if (message === DeviceCommand.reset) {
+                    console.log("Restarting...")
+                    client.end();
+                    this.forgot();
+                    this.connectPairing();
+                }
+            } else if (topic.startsWith(this.getDevicePrefix())) {
+                this.nodes.forEach(({ nodeId, properties }) => {
+                    properties.forEach((property) => {
+                        const { propertyId, settable, callback } = property
+                        if (`${this.getDevicePrefix()}/${nodeId}/${propertyId}/set` === topic && settable) {
+                            property.value = message;
+                            if (callback) callback(property);
+                            client.publish(`${this.getDevicePrefix()}/${nodeId}/${propertyId}`, message);
+                        }
+                    })
+                });
+            }
+            else this.emit(topic.replace(this.getDevicePrefix(), ""), message);
         });
         client.on("error", (err: any) => {
             if (err.code === 4) {
@@ -97,6 +120,10 @@ export class Platform extends events.EventEmitter {
                 this.connectPairing();
             } else console.log("error2", err)
         });
+        client.on("connect", () => {
+            console.log("connected v2");
+            this.emit("connect", client);
+        })
     };
 
     addNode = (nodeId: string, name: string, componentType: ComponentType) => {
@@ -142,9 +169,15 @@ export class Platform extends events.EventEmitter {
             client.on("error", function (err) {
                 console.log("error", err)
             })
+
+            client.on("connect", () => {
+                console.log("connected prefix");
+            })
+
             console.log("connecting as guest");
             client.publish(`${this.getDevicePrefix()}/$state`, "init");
             client.subscribe(`${this.getDevicePrefix()}/$config/apiKey/set`);
+            client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
 
             client.publish(`${this.getDevicePrefix()}/$name`, this.deviceName);
             client.publish(`${this.getDevicePrefix()}/$realm`, this.userName);
@@ -239,6 +272,7 @@ export class Platform extends events.EventEmitter {
                     this.connect();
                 }
             });
+
         });
     };
 
