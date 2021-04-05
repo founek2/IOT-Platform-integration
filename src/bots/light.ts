@@ -2,8 +2,30 @@ import { Platform } from "../lib/connection";
 import { ComponentType, PropertyDataType } from "../lib/type";
 
 async function main() {
-    const plat = new Platform("light-411D1", "martas", "Světlomat");
-    plat.addNode("light", "Světlo", ComponentType.switch);
+    const plat = new Platform("ESP-91JK123", "martas", "Světlomat");
+    const nodeLight = plat.addNode("light", "Světlo", ComponentType.switch);
+    nodeLight.addProperty({
+        propertyId: "power",
+        dataType: PropertyDataType.boolean,
+        name: "Světlo",
+        settable: true,
+    })
+
+    nodeLight.addProperty({
+        propertyId: "current",
+        dataType: PropertyDataType.integer,
+        name: "Proud",
+        settable: true,
+        format: "0:16"
+    })
+
+    nodeLight.addProperty({
+        propertyId: "kill",
+        dataType: PropertyDataType.boolean,
+        name: "Zabít",
+        settable: true
+    })
+
     const node = plat.addNode("center", "Centrum", ComponentType.generic);
     node.addProperty({
         name: "Displej",
@@ -11,6 +33,7 @@ async function main() {
         dataType: PropertyDataType.enum,
         format: "BTC,EUR,CZK,ETH",
         settable: true,
+        callback: (prop) => console.log("currency is", prop.value)
     });
 
     plat.addSensor({
@@ -27,6 +50,7 @@ async function main() {
         unitOfMeasurement: "%",
         format: "0:100",
         settable: true,
+        callback: (prop) => console.log("percentage is", prop.value)
     });
 
     node.addProperty({
@@ -34,6 +58,7 @@ async function main() {
         propertyId: "numbers",
         dataType: PropertyDataType.integer,
         settable: true,
+        callback: (prop) => console.log("numbers is", prop.value)
     });
 
     node.addProperty({
@@ -41,6 +66,7 @@ async function main() {
         propertyId: "strings",
         dataType: PropertyDataType.string,
         settable: true,
+        callback: (prop) => console.log("strings is", prop.value)
     });
 
     function sendRate() {
@@ -58,21 +84,11 @@ async function main() {
         // plat.publishSensorData("hum", "74");
         // plat.publishSensorData("power", "0");
 
-        plat.publishData("light", "power", "on");
+        plat.publishData("light", "power", "true");
 
         sendRate();
-        setInterval(sendRate, 1000);
+        // setInterval(sendRate, 1000);
         plat.publishData("center", "currency", "ETH");
-
-        plat.on("v2/martas/light-411D1/light/power/set", (value) => {
-            console.log("recieved power", value);
-            client.publish("v2/martas/light-411D1/light/power", value);
-        });
-
-        plat.on("v2/martas/light-411D1/center/currency/set", (value) => {
-            console.log("recieved currency", value);
-            client.publish("v2/martas/light-411D1/center/currency", value);
-        });
     });
     plat.init();
 }

@@ -8,6 +8,7 @@ export interface PropertyArgs {
     unitOfMeasurement?: string;
     format?: string;
     settable?: boolean;
+    callback?: (prop: Property) => void;
 }
 export class Property {
     propertyId: string;
@@ -15,8 +16,10 @@ export class Property {
     dataType: PropertyDataType;
     propertyClass?: PropertyClass;
     unitOfMeasurement?: string;
-    format: string;
+    format?: string;
     settable?: boolean;
+    value: string;
+    callback?: (prop: Property) => void;
 
     constructor({
         propertyId,
@@ -26,13 +29,15 @@ export class Property {
         unitOfMeasurement,
         format,
         settable,
+        callback
     }: PropertyArgs) {
         this.propertyId = propertyId;
         this.name = name;
         this.dataType = dataType;
-        if (propertyClass) this.propertyClass = propertyClass;
-        if (unitOfMeasurement) this.unitOfMeasurement = unitOfMeasurement;
-        if (format) this.format = format;
+        this.callback = callback;
+        this.propertyClass = propertyClass;
+        this.unitOfMeasurement = unitOfMeasurement;
+        this.format = format;
         this.settable = settable;
     }
 }
