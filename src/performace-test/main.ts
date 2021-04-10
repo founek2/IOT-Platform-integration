@@ -1,33 +1,43 @@
-import fetch, { Response } from "node-fetch";
-import { IUser } from "../lib/type";
-import { UsersManager } from "./UsersManager";
 import { DevicesManager } from "./DevicesManager";
+import { UsersManager } from "./UsersManager";
+import { sleep } from "../lib/utils";
+import { localStorage } from "../lib/storage";
 
 async function main() {
-    const users = new UsersManager(2);
-    await users.createAll();
+    localStorage.clear();
+    let users = new UsersManager(20);
+    let devices = new DevicesManager(200);
 
-    const devices = new DevicesManager(100);
-    await devices.createAll(users.objects.map((obj) => obj.user));
+    try {
+        await users.createAll();
 
-    await sleep(3000);
+        await devices.createAll(users.objects.map((obj) => obj.user));
 
-    await users.pairAllDevices();
+        // await sleep(60);
 
-    await sleep(60 * 1000);
+        await users.pairAllDevices(devices.count);
 
-    await devices.deleteAll();
-    await users.deleteAllDevices();
+        await sleep(10);
+    } catch (err) {
+        console.log(err)
+    }
 
-    await users.deleteAll();
+    try {
+        await devices.deleteAll();
+
+        await sleep(2);
+    } catch (err) { }
+
+    try {
+        await users.deleteAllDevices();
+    } catch (err) { }
+
+    try {
+        await users.deleteAll();
+    } catch (err) { }
 
     process.exit(0);
 }
 
 main();
 
-function sleep(ms) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
-}
