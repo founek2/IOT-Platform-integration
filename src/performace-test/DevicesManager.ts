@@ -1,5 +1,7 @@
 import { Platform } from "../lib/connection";
 import { ComponentType, IUser, PropertyDataType } from "../lib/type";
+import asyncPool from "tiny-async-pool";
+import { sleep } from "../lib/utils";
 
 export class DevicesManager {
     count: number;
@@ -9,9 +11,12 @@ export class DevicesManager {
     }
 
     createAll = async (users: IUser[]) => {
-        this.objects = [...new Array(this.count)]
-            .map((_, i) => i)
-            .map((i) => {
+        console.log("Setting up", this.count, "devices")
+
+        this.objects = await asyncPool(
+            7,
+            [...new Array(this.count)].map((_, i) => i),
+            async (i) => {
                 const plat = new Platform(
                     "VIRT-" + i,
                     getNext(users, i).info.userName,
@@ -31,48 +36,55 @@ export class DevicesManager {
                     unitOfMeasurement: "%",
                 });
 
-                plat.addNode("light", "Světloa", ComponentType.switch);
+                plat.addNode("light", "Světlo", ComponentType.switch).addProperty({
+                    propertyId: "power",
+                    dataType: PropertyDataType.boolean,
+                    name: "Zapnutí"
+                })
 
                 plat.on("connect", (client) => {
-                    console.log("sending data");
                     plat.publishSensorData("temperature", "11");
                     plat.publishSensorData("humidity", "21.6");
                     plat.publishData("light", "power", "off");
 
                     setInterval(() => {
-                        plat.publishSensorData("temperature", "11");
-                    }, (Math.random() * 4 + 2) * 1000);
+                        if (plat.client.connected)
+                            plat.publishSensorData("temperature", "11");
+                    }, (Math.random() * 10 + 2) * 1000);
 
                     setInterval(() => {
-                        plat.publishSensorData("humidity", "21.6");
-                    }, (Math.random() * 4 + 2) * 1000);
+                        if (plat.client.connected)
+                            plat.publishSensorData("humidity", "21.6");
+                    }, (Math.random() * 10 + 2) * 1000);
                     setInterval(() => {
-                        plat.publishData(
-                            "light",
-                            "power",
-                            Math.random() > 0.5 ? "on" : "off"
-                        );
-                    }, (Math.random() * 4 + 2) * 1000);
+                        if (plat.client.connected)
+                            plat.publishData(
+                                "light",
+                                "power",
+                                Math.random() > 0.5 ? "on" : "off"
+                            );
+                    }, (Math.random() * 10 + 2) * 1000);
 
                     plat.on("/light/power/set", (value) => {
                         console.log("recieved power", value);
                         plat.publishData("light", "power", value);
                     });
                 });
-                plat.init();
-
+                await plat.init();
+                await sleep(1, true);
                 return plat;
             });
     };
 
     deleteAll = async () => {
-        return Promise.all(
-            this.objects.map(
-                (obj) =>
-                    new Promise((res, rej) => {
-                        obj.client.end(false, {}, res);
-                    })
-            )
+        return asyncPool(
+            10,
+            this.objects,
+            (obj) =>
+                new Promise((res, rej) => {
+                    obj.client.end(false, {}, res);
+                })
+
         );
     };
 }

@@ -86,9 +86,11 @@ async function main() {
         // plat.publishSensorData("temp", "21.1");
         // plat.publishSensorData("hum", "74");
         // plat.publishSensorData("power", "0");
+        setInterval(function () {
+            plat.publishData("spa", "temperature", "37.8")
+        }, 10000)
 
         plat.publishData("spa", "temperature", "38")
-        plat.publishData("spa", "temptarget", "38")
     });
     plat.init();
 }

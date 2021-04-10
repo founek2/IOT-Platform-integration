@@ -1,19 +1,19 @@
 import { PropertyClass, PropertyDataType, ComponentType, DeviceCommand } from "./type";
 import * as mqtt from "mqtt";
 import { Node, PropertyArgs } from "./node";
+import conf from "../config"
+import { EventEmitter } from "events"
+import { localStorage } from "./storage";
 
-const getTopic = require("./getTopic");
-const conf = require("../config");
-const LocalStorage = require("node-localstorage").LocalStorage;
-const topicParser = require("./topicParser");
-const events = require("events");
-const localStorage = new LocalStorage(conf.STORAGE_PATH);
-
+function logger(...args) {
+    if (process.env.MODE != "test")
+        console.log(...args)
+}
 interface store {
     apiKey: string;
 }
 
-export class Platform extends events.EventEmitter {
+export class Platform extends EventEmitter {
     deviceId: string;
     deviceName: string;
     meta: null | store = null;
@@ -34,7 +34,7 @@ export class Platform extends events.EventEmitter {
 
     init = async () => {
         if (!this.isPaired()) return this.connectPairing();
-        this.connect();
+        return this.connect();
     };
 
     isPaired = () => {
@@ -49,7 +49,7 @@ export class Platform extends events.EventEmitter {
 
     connect = () => {
         if (this.meta === null) {
-            console.log("cant connect without apiKey");
+            logger("cant connect without apiKey");
             return;
         }
 
@@ -68,7 +68,7 @@ export class Platform extends events.EventEmitter {
                 qos: 1,
             },
         });
-        console.log("connecting as paired device");
+        logger("connecting as paired device");
         // client.subscribe("v2/device/" + this.deviceId + "/apiKey");
         client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
 
@@ -85,14 +85,14 @@ export class Platform extends events.EventEmitter {
 
         client.on("message", (topic, data) => {
             const message = data.toString()
-            console.log("message", topic, message)
+            logger("message", topic, message)
             if (topic === `${this.getDevicePrefix()}/$cmd/set`) {
                 if (message === DeviceCommand.restart) {
-                    console.log("Reseting...")
+                    logger("Reseting...")
                     client.end();
                     this.connect();
                 } else if (message === DeviceCommand.reset) {
-                    console.log("Restarting...")
+                    logger("Restarting...")
                     client.end();
                     this.forgot();
                     this.connectPairing();
@@ -114,14 +114,13 @@ export class Platform extends events.EventEmitter {
         client.on("error", (err: any) => {
             if (err.code === 4) {
                 // Invalid login
-                console.log("Invalid userName/password, forgeting apiKey");
+                logger("Invalid userName/password, forgeting apiKey");
                 client.end();
                 this.forgot();
                 this.connectPairing();
-            } else console.log("error2", err)
+            } else logger("error2", err)
         });
         client.on("connect", () => {
-            console.log("connected v2");
             this.emit("connect", client);
         })
     };
@@ -151,129 +150,123 @@ export class Platform extends events.EventEmitter {
     getDevicePrefix = () => `${this.prefix}/${this.deviceId}`;
 
     connectPairing = async () => {
-        return new Promise(async (resolve, reject) => {
-            console.log("conf", conf)
-            const client = mqtt.connect(conf.MQTT_SERVER_URL, {
-                username: "guest=" + this.deviceId,
-                password: "guest",
-                port: conf.MQTT_SERVER_PORT,
-                connectTimeout: 20 * 1000,
-                rejectUnauthorized: false,
-                will: {
-                    topic: `${this.getDevicePrefix()}/$state`,
-                    payload: "lost",
-                    retain: true,
-                    qos: 1,
-                },
-            });
-            client.on("error", function (err) {
-                console.log("error", err)
-            })
-
-            client.on("connect", () => {
-                console.log("connected prefix");
-            })
-
-            console.log("connecting as guest");
-            client.publish(`${this.getDevicePrefix()}/$state`, "init");
-            client.subscribe(`${this.getDevicePrefix()}/$config/apiKey/set`);
-            client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
-
-            client.publish(`${this.getDevicePrefix()}/$name`, this.deviceName);
-            client.publish(`${this.getDevicePrefix()}/$realm`, this.userName);
-            client.publish(
-                `${this.getDevicePrefix()}/$nodes`,
-                this.nodes.map((node) => node.nodeId).join()
-            );
-
-            this.nodes.forEach(
-                ({ nodeId, properties, componentType, name }) => {
-                    client.publish(
-                        `${this.getDevicePrefix()}/${nodeId}/$name`,
-                        name
-                    );
-                    client.publish(
-                        `${this.getDevicePrefix()}/${nodeId}/$type`,
-                        componentType
-                    );
-                    client.publish(
-                        `${this.getDevicePrefix()}/${nodeId}/$properties`,
-                        properties.map((prop) => prop.propertyId).join()
-                    );
-                    properties.forEach(
-                        ({
-                            name,
-                            propertyClass,
-                            unitOfMeasurement,
-                            propertyId,
-                            dataType,
-                            format,
-                            settable,
-                        }) => {
-                            if (name)
-                                client.publish(
-                                    `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$name`,
-                                    name
-                                );
-                            if (unitOfMeasurement)
-                                client.publish(
-                                    `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$unit`,
-                                    unitOfMeasurement
-                                );
-                            if (dataType)
-                                client.publish(
-                                    `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$datatype`,
-                                    dataType
-                                );
-                            if (propertyClass)
-                                client.publish(
-                                    `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$class`,
-                                    propertyClass
-                                );
-                            if (format)
-                                client.publish(
-                                    `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$format`,
-                                    format
-                                );
-                            if (settable)
-                                client.publish(
-                                    `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$settable`,
-                                    settable.toString()
-                                );
-                        }
-                    );
-                }
-            );
-            console.log("meta", this.meta);
-
-            await sleep(200);
-            client.publish(`${this.getDevicePrefix()}/$state`, "ready");
-
-            client.on("message", async (topic, message) => {
-                console.log("message", topic, message.toString());
-
-                if (this.getDevicePrefix() + "/$config/apiKey/set") {
-                    this.meta = { apiKey: message.toString() };
-                    localStorage.setItem(
-                        this.deviceId,
-                        JSON.stringify(this.meta)
-                    );
-                    console.log("GOT apiKey -> reconect");
-
-                    client.publish(
-                        `${this.getDevicePrefix()}/$state`,
-                        "paired"
-                    );
-                    client.publish(
-                        `${this.getDevicePrefix()}/$state`,
-                        "disconnected"
-                    );
-                    client.end();
-                    this.connect();
-                }
-            });
-
+        const client = mqtt.connect(conf.MQTT_SERVER_URL, {
+            username: "guest=" + this.deviceId,
+            password: "guest",
+            port: conf.MQTT_SERVER_PORT,
+            connectTimeout: 20 * 1000,
+            rejectUnauthorized: false,
+            will: {
+                topic: `${this.getDevicePrefix()}/$state`,
+                payload: "lost",
+                retain: true,
+                qos: 1,
+            },
         });
+        client.on("error", function (err) {
+            logger("error", err)
+        })
+
+        client.on("connect", () => {
+
+        })
+
+        logger("connecting as guest to", conf.MQTT_SERVER_URL);
+        client.publish(`${this.getDevicePrefix()}/$state`, "init");
+        client.subscribe(`${this.getDevicePrefix()}/$config/apiKey/set`);
+        client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
+
+        client.publish(`${this.getDevicePrefix()}/$name`, this.deviceName);
+        client.publish(`${this.getDevicePrefix()}/$realm`, this.userName);
+        client.publish(
+            `${this.getDevicePrefix()}/$nodes`,
+            this.nodes.map((node) => node.nodeId).join()
+        );
+
+        this.nodes.forEach(
+            ({ nodeId, properties, componentType, name }) => {
+                client.publish(
+                    `${this.getDevicePrefix()}/${nodeId}/$name`,
+                    name
+                );
+                client.publish(
+                    `${this.getDevicePrefix()}/${nodeId}/$type`,
+                    componentType
+                );
+                client.publish(
+                    `${this.getDevicePrefix()}/${nodeId}/$properties`,
+                    properties.map((prop) => prop.propertyId).join()
+                );
+                properties.forEach(
+                    ({
+                        name,
+                        propertyClass,
+                        unitOfMeasurement,
+                        propertyId,
+                        dataType,
+                        format,
+                        settable,
+                    }) => {
+                        if (name)
+                            client.publish(
+                                `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$name`,
+                                name
+                            );
+                        if (unitOfMeasurement)
+                            client.publish(
+                                `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$unit`,
+                                unitOfMeasurement
+                            );
+                        if (dataType)
+                            client.publish(
+                                `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$datatype`,
+                                dataType
+                            );
+                        if (propertyClass)
+                            client.publish(
+                                `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$class`,
+                                propertyClass
+                            );
+                        if (format)
+                            client.publish(
+                                `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$format`,
+                                format
+                            );
+                        if (settable)
+                            client.publish(
+                                `${this.getDevicePrefix()}/${nodeId}/${propertyId}/$settable`,
+                                settable.toString()
+                            );
+                    }
+                );
+            }
+        );
+        logger("meta", this.meta);
+
+        client.on("message", async (topic, message) => {
+            logger("message", topic, message.toString());
+
+            if (this.getDevicePrefix() + "/$config/apiKey/set") {
+                this.meta = { apiKey: message.toString() };
+                localStorage.setItem(
+                    this.deviceId,
+                    JSON.stringify(this.meta)
+                );
+                logger("GOT apiKey -> reconect");
+
+                client.publish(
+                    `${this.getDevicePrefix()}/$state`,
+                    "paired"
+                );
+                client.publish(
+                    `${this.getDevicePrefix()}/$state`,
+                    "disconnected"
+                );
+                client.end();
+                this.connect();
+            }
+        });
+        client.publish(`${this.getDevicePrefix()}/$state`, "ready");
     };
 
     publishSensorData = (propertyId, value) => {
@@ -282,7 +275,7 @@ export class Platform extends events.EventEmitter {
                 properties.some((prop) => prop.propertyId === propertyId) &&
                 componentType === ComponentType.sensor
         );
-        if (!node) return console.log("unable to locate sensor node");
+        if (!node) return logger("unable to locate sensor node");
 
         this.client.publish(
             `${this.getDevicePrefix()}/${node.nodeId}/${propertyId}`,

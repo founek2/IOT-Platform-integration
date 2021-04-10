@@ -75,6 +75,7 @@ async function main() {
         format: "on,off,kill",
         callback: (prop) => {
             console.log("recieved try:", prop.value)
+            plat.client.publish("v2/martas/ESP-91JK123/light/power/set", "true")
         }
     })
 
