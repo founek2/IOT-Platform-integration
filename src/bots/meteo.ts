@@ -3,7 +3,7 @@ import { ComponentType, PropertyClass, PropertyDataType } from "../lib/type";
 
 // const configs = [config1, config2, config3, config4, configDevice,];
 async function main() {
-    const plat = new Platform("meteo-423D1", "martas", "Meteostanice");
+    const plat = new Platform("BOT-423D1", "martas", "Meteostanice");
     const node = plat.addNode("light", "Světlo", ComponentType.switch);
     node.addProperty({
         propertyId: "power",
@@ -66,18 +66,18 @@ async function main() {
         }
     })
 
-    const nodeTry = plat.addNode("test", "Pokus", ComponentType.activator);
-    nodeTry.addProperty({
-        propertyId: "kill",
-        dataType: PropertyDataType.enum,
-        name: "Zabití",
-        settable: true,
-        format: "on,off,kill",
-        callback: (prop) => {
-            console.log("recieved try:", prop.value)
-            plat.client.publish("v2/martas/ESP-91JK123/light/power/set", "true")
-        }
-    })
+    // const nodeTry = plat.addNode("test", "Pokus", ComponentType.activator);
+    // nodeTry.addProperty({
+    //     propertyId: "kill",
+    //     dataType: PropertyDataType.enum,
+    //     name: "Zabití",
+    //     settable: true,
+    //     format: "on,off,kill",
+    //     callback: (prop) => {
+    //         console.log("recieved try:", prop.value)
+    //         plat.client.publish("v2/martas/ESP-91JK123/light/power/set", "true")
+    //     }
+    // })
 
     // plat.publishData("volt", "11");
     plat.on("connect", (client) => {
@@ -87,7 +87,8 @@ async function main() {
         plat.publishSensorData("hum", "74");
         plat.publishSensorData("press", "112");
         plat.publishSensorData("temp2", "15.4");
-        //plat.publishData("light", "power", "0");
+
+        // plat.publishData("test", "kill", "on");
 
         plat.publishSensorData("volt", "10.5");
         plat.publishSensorData("temp", "21.6");

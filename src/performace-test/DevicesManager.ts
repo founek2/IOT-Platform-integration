@@ -50,12 +50,12 @@ export class DevicesManager {
                     setInterval(() => {
                         if (plat.client.connected)
                             plat.publishSensorData("temperature", "11");
-                    }, (Math.random() * 10 + 2) * 1000);
+                    }, (Math.random() * 10 + 50) * 1000);
 
                     setInterval(() => {
                         if (plat.client.connected)
                             plat.publishSensorData("humidity", "21.6");
-                    }, (Math.random() * 10 + 2) * 1000);
+                    }, (Math.random() * 10 + 50) * 1000);
                     setInterval(() => {
                         if (plat.client.connected)
                             plat.publishData(
@@ -63,7 +63,7 @@ export class DevicesManager {
                                 "power",
                                 Math.random() > 0.5 ? "on" : "off"
                             );
-                    }, (Math.random() * 10 + 2) * 1000);
+                    }, (Math.random() * 10 + 50) * 1000);
 
                     plat.on("/light/power/set", (value) => {
                         console.log("recieved power", value);

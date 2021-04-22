@@ -2,7 +2,7 @@ import { Platform } from "../lib/connection";
 import { ComponentType, PropertyDataType } from "../lib/type";
 
 async function main() {
-    const plat = new Platform("ESP-91JK123", "martas", "Světlomat");
+    const plat = new Platform("BOT-91JK123", "martas", "Světlomat");
     const nodeLight = plat.addNode("light", "Světlo", ComponentType.switch);
     nodeLight.addProperty({
         propertyId: "power",
