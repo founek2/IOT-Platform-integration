@@ -28,7 +28,7 @@ const Nozzles = {
 }
 
 async function main() {
-    const plat = new Platform("ESP-9011AC", "martas", "Spáčko");
+    const plat = new Platform("BOT-9011AC", "martas", "Spáčko");
     const nodeLight = plat.addNode("spa", "Vířivka", ComponentType.sensor);
     nodeLight.addProperty({
         propertyId: "temperature",

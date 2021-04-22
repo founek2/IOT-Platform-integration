@@ -5,19 +5,20 @@ import { localStorage } from "../lib/storage";
 
 async function main() {
     localStorage.clear();
-    let users = new UsersManager(20);
-    let devices = new DevicesManager(200);
+    let users = new UsersManager(25);
+    let devices = new DevicesManager(250);
 
     try {
         await users.createAll();
 
         await devices.createAll(users.objects.map((obj) => obj.user));
 
-        // await sleep(60);
+        await sleep(120);
 
         await users.pairAllDevices(devices.count);
 
-        await sleep(10);
+        console.log("Let the party begin!")
+        await sleep(10 * 60);
     } catch (err) {
         console.log(err)
     }
@@ -25,7 +26,7 @@ async function main() {
     try {
         await devices.deleteAll();
 
-        await sleep(2);
+        await sleep(5);
     } catch (err) { }
 
     try {
