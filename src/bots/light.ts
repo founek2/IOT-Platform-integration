@@ -37,10 +37,10 @@ async function main() {
     });
 
     plat.addSensor({
-        name: "Aktuální kurz",
+        name: "Aktuální teplota",
         propertyId: "rate",
         dataType: PropertyDataType.float,
-        unitOfMeasurement: "$",
+        unitOfMeasurement: "°C",
     })
 
     node.addProperty({
@@ -87,7 +87,7 @@ async function main() {
         plat.publishData("light", "power", "true");
 
         sendRate();
-        // setInterval(sendRate, 1000);
+        setInterval(sendRate, 2000);
         plat.publishData("center", "currency", "ETH");
     });
     plat.init();

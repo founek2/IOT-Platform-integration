@@ -35,7 +35,8 @@ async function main() {
         dataType: PropertyDataType.float,
         name: "Teplota",
         propertyClass: PropertyClass.Temperature,
-        unitOfMeasurement: "°C"
+        unitOfMeasurement: "°C",
+        settable: true,
     })
 
     nodeLight.addProperty({
@@ -69,15 +70,6 @@ async function main() {
         }
     })
 
-    nodeLight.addProperty({
-        propertyId: "temptarget",
-        dataType: PropertyDataType.float,
-        name: "Teplota",
-        format: "25:40",
-        settable: true,
-        unitOfMeasurement: "°C"
-    })
-
 
     // plat.publishData("volt", "11");
     plat.on("connect", (client) => {
@@ -97,21 +89,27 @@ async function main() {
 
 main();
 
+client.on('data', function (data) {
+    console.log('Received: ' + data);
+    client.destroy(); // kill client after server's response
+});
+// client.connect(config.spaPort, config.spaIp)
+
+client.on('close', function () {
+    console.log('Connection closed');
+});
 
 function sendData(message: string) {
     client.connect(config.spaPort, config.spaIp, function () {
-        console.log('Connected');
-        // client.write(message);
-        console.log("message", message)
-        client.destroy();
-    });
+        console.log("sending", message)
+        client.write(message);
+    })
+    // client.connect(config.spaPort, config.spaIp, function () {
+    //     console.log('Connected');
+    //     client.write(message);
+    //     console.log("message", message)
+    //     client.destroy();
+    // });
 
-    client.on('data', function (data) {
-        console.log('Received: ' + data);
-        client.destroy(); // kill client after server's response
-    });
 
-    client.on('close', function () {
-        console.log('Connection closed');
-    });
 }
