@@ -1,0 +1,11 @@
+{
+  "name": "braviaTV",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Martin Skalický",
+  "license": "MIT",
+  "dependencies": {
+    "bravia": "^1.3.3",
+    "bravia-simple-ip-control": "^1.0.1"
+  }
+}
