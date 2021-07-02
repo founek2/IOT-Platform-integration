@@ -17,7 +17,7 @@
     "mqtt": "^4.2.6",
     "node-fetch": "^2.6.1",
     "node-localstorage": "^2.1.6",
-    "systeminformation": "^5.6.1",
+    "systeminformation": "^5.6.4",
     "tiny-async-pool": "^1.2.0",
     "ts-node-dev": "^1.1.6",
     "typescript": "^3.9.6"
