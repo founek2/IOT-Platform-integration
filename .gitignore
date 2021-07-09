@@ -3,5 +3,5 @@
 .env
 /local-storage
 /dist
-process.js
+ecosystem.config.js
 tsconfig.tsbuildinfo
