@@ -6,7 +6,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node-dev bots/meteo.ts"
+    "dev": "ts-node-dev bots/meteo.ts",
+    "build": "tsc -p ."
   },
   "author": "Martin Skalický",
   "license": "ISC",
