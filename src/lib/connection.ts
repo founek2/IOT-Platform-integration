@@ -128,9 +128,12 @@ export class Platform extends EventEmitter {
             if (err.code === 4) {
                 // Invalid login
                 logger('Invalid userName/password, forgeting apiKey');
-                client.end();
-                this.forgot();
-                this.connectPairing();
+
+                if (process.env.NODE_ENV !== 'production') {
+                    client.end();
+                    this.forgot();
+                    this.connectPairing();
+                }
             } else logger('error2', err);
         });
         client.on('connect', () => {
