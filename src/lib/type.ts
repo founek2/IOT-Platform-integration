@@ -1,31 +1,32 @@
 export enum PropertyClass {
-    Temperature = "temperature",
-    Humidity = "humidity",
-    Pressure = "pressure",
-    Voltage = "voltage",
+    Temperature = 'temperature',
+    Humidity = 'humidity',
+    Pressure = 'pressure',
+    Voltage = 'voltage',
 }
 export enum DeviceCommand {
-    restart = "restart",
-    reset = "reset",
+    restart = 'restart',
+    reset = 'reset',
 }
 
 export enum ComponentType {
-    sensor = "sensor",
-    generic = "generic",
-    switch = "switch",
-    activator = "activator",
+    sensor = 'sensor',
+    generic = 'generic',
+    switch = 'switch',
+    activator = 'activator',
 }
 
 export const NodeProperties = {
-    [ComponentType.switch]: ["power"],
+    [ComponentType.switch]: ['power'],
 };
 
 export enum PropertyDataType {
-    string = "string",
-    float = "float",
-    boolean = "boolean",
-    integer = "integer",
-    enum = "enum",
+    string = 'string',
+    float = 'float',
+    boolean = 'boolean',
+    integer = 'integer',
+    enum = 'enum',
+    color = 'color',
 }
 
 export interface IUser {
@@ -38,7 +39,7 @@ export interface IUser {
         phoneNumber?: string;
     };
     auth: {
-        type: "passwd";
+        type: 'passwd';
         password: string;
     };
     realm: string;
