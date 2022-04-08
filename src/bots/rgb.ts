@@ -16,6 +16,7 @@ async function main() {
         dataType: PropertyDataType.color,
         name: 'Barva',
         settable: true,
+        retained: true,
     });
 
     nodeLight.addProperty({
@@ -24,6 +25,7 @@ async function main() {
         format: '0:100',
         name: 'Jas',
         settable: true,
+        retained: true,
     });
 
     plat.init();

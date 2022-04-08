@@ -8,6 +8,7 @@ export interface PropertyArgs {
     unitOfMeasurement?: string;
     format?: string;
     settable?: boolean;
+    retained?: boolean;
     callback?: (prop: Property) => void;
 }
 export class Property {
@@ -18,6 +19,7 @@ export class Property {
     unitOfMeasurement?: string;
     format?: string;
     settable?: boolean;
+    retained?: boolean;
     value: string;
     callback?: (prop: Property) => void;
 
@@ -29,6 +31,7 @@ export class Property {
         unitOfMeasurement,
         format,
         settable,
+        retained,
         callback
     }: PropertyArgs) {
         this.propertyId = propertyId;
@@ -39,6 +42,7 @@ export class Property {
         this.unitOfMeasurement = unitOfMeasurement;
         this.format = format;
         this.settable = settable;
+        this.retained = retained;
     }
 }
 
