@@ -156,7 +156,7 @@ async function main() {
     }
 
     sync();
-    setTimeout(sync, 1000 * 60 * 5);
+    setInterval(sync, 1000 * 60 * 5);
 }
 
 main();
