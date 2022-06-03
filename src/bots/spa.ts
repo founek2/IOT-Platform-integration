@@ -29,17 +29,17 @@ const Bubbles = {
     },
 };
 
-const Alimentation = {
+const Power = {
     on: { data: '8888060F01400098', sid: '1631357332538', type: 1 },
     off: { data: '8888060F01400098', sid: '1631357332538', type: 1 },
 };
 
-const DontKnow = {
+const Filtration = {
     on: { data: '8888060F010004D4', sid: '1626776247245', type: 1 },
     off: { data: '8888060F010004D4', sid: '1626776247245', type: 1 },
 };
 
-const Pump = {
+const FiltrationAndHeater = {
     on: { data: '8888060F010010C8', sid: '1631356889267', type: 1 },
     off: { data: '8888060F010010C8', sid: '1631356889267', type: 1 },
 };
@@ -50,27 +50,27 @@ const StatusPayload = { data: '8888060FEE0F01DA', sid: '1630705186378', type: 1 
 const Nozzles = {
     on: JSON.stringify({
         type: 1,
-        sid: '1616871592000',
+        sid: '1631356889267',
         data: '8888060F011000C8',
     }),
     off: JSON.stringify({
         type: 1,
-        sid: '1616871596000',
+        sid: '1631356889267',
         data: '8888060F011000C8',
     }),
 };
 
 async function main() {
-    const plat = new Platform('BOT-9911CC', 'martas', 'Spáčko');
+    const plat = new Platform('BOT-9011CC', 'martas', 'Spáčko');
     const nodeLight = plat.addNode('control', 'Vířivka', ComponentType.switch);
     nodeLight.addProperty({
         propertyId: 'switch',
         dataType: PropertyDataType.boolean,
         name: 'Ohřev',
-        settable: false,
+        settable: true,
         callback: function (prop) {
-            // if (prop.value === 'true') sendData(Pump.on);
-            // else sendData(Pump.off);
+            if (prop.value === 'true') sendData(FiltrationAndHeater.on);
+            else sendData(FiltrationAndHeater.off);
         },
     });
     nodeLight.addProperty({
@@ -101,8 +101,8 @@ async function main() {
         name: 'Filtrace',
         settable: true,
         callback: function (prop) {
-            if (prop.value === 'true') sendData(Pump.on);
-            else sendData(Pump.off);
+            if (prop.value === 'true') sendData(Filtration.on);
+            else sendData(Filtration.off);
         },
     });
 
@@ -110,11 +110,11 @@ async function main() {
         propertyId: 'electrolysis',
         dataType: PropertyDataType.boolean,
         name: 'Elektrolýza',
-        settable: false,
-        callback: function (prop) {
-            // if (prop.value === 'true') sendData(Pump.on);
-            // else sendData(Pump.off);
-        },
+        // settable: true,
+        // callback: function (prop) {
+        // if (prop.value === 'true') sendData(Alimentation.on);
+        // else sendData(Alimentation.off);
+        // },
     });
 
     const nodeSwitch = plat.addNode('sensor', 'Teplota', ComponentType.sensor);
@@ -170,6 +170,10 @@ main();
 client.on('close', function () {
     console.log('Connection closed');
 });
+client.on('error', function (err) {
+    console.error(err);
+});
+// client.setKeepAlive(true, 5000);
 
 function sendData(payload: any): Promise<{ sid: string; data: string; result: 'ok'; type: number }> {
     return new Promise((resolve) => {
@@ -179,8 +183,8 @@ function sendData(payload: any): Promise<{ sid: string; data: string; result: 'o
 
             client.on('data', (message) => {
                 console.log('received response');
-                client.destroy();
                 resolve(JSON.parse(message.toString()));
+                client.destroy();
             });
         });
     });
