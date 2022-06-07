@@ -68,9 +68,9 @@ async function main() {
         dataType: PropertyDataType.boolean,
         name: 'Ohřev',
         settable: true,
-        callback: function (prop) {
-            if (prop.value === 'true') sendData(FiltrationAndHeater.on);
-            else sendData(FiltrationAndHeater.off);
+        callback: async function (prop) {
+            const response = await sendData(FiltrationAndHeater.off);
+            sync(response.data);
         },
     });
     nodeLight.addProperty({
@@ -78,9 +78,9 @@ async function main() {
         dataType: PropertyDataType.boolean,
         name: 'Bubliny',
         settable: true,
-        callback: function (prop) {
-            if (prop.value === 'true') sendData(Bubbles.on);
-            else sendData(Bubbles.off);
+        callback: async function (prop) {
+            const response = await sendData(Bubbles.on);
+            sync(response.data);
         },
     });
 
@@ -89,9 +89,9 @@ async function main() {
         dataType: PropertyDataType.boolean,
         name: 'Trysky',
         settable: true,
-        callback: function (prop) {
-            if (prop.value === 'true') sendData(Nozzles.on);
-            else sendData(Nozzles.off);
+        callback: async function (prop) {
+            const response = await sendData(Nozzles.on);
+            sync(response.data);
         },
     });
 
@@ -100,9 +100,9 @@ async function main() {
         dataType: PropertyDataType.boolean,
         name: 'Filtrace',
         settable: true,
-        callback: function (prop) {
-            if (prop.value === 'true') sendData(Filtration.on);
-            else sendData(Filtration.off);
+        callback: async function (prop) {
+            const response = await sendData(Filtration.on);
+            sync(response.data);
         },
     });
 
@@ -132,7 +132,6 @@ async function main() {
         name: 'Cíl',
         propertyClass: PropertyClass.Temperature,
         unitOfMeasurement: '°C',
-        // settable: true,
     });
 
     // plat.publishData("volt", "11");
@@ -142,9 +141,14 @@ async function main() {
     // const response = await sendData(StatusPayload);
     // console.log('res', response, decodeData(response.data));
 
-    async function sync() {
-        const response = await sendData(StatusPayload);
-        const json = decodeData(response.data);
+    async function sync(responseData?: string) {
+        let data = responseData;
+        if (!data) {
+            const response = await sendData(StatusPayload);
+            data = response.data;
+        }
+
+        const json = decodeData(data);
         plat.publishData('control', 'bubbles', json.bubbles.toString());
         plat.publishData('control', 'nozzles', json.nozzles.toString());
         plat.publishData('control', 'pump', json.pump.toString());
@@ -155,8 +159,8 @@ async function main() {
         plat.publishData('sensor', 'tempPreset', json.presetTemp.toString());
     }
 
-    sync();
-    setInterval(sync, 1000 * 60 * 5);
+    // sync();
+    // setInterval(() => sync(), 1000 * 60 * 5);
 }
 
 main();
@@ -178,12 +182,11 @@ client.on('error', function (err) {
 function sendData(payload: any): Promise<{ sid: string; data: string; result: 'ok'; type: number }> {
     return new Promise((resolve) => {
         client.connect(config.spaPort, config.spaIp, function () {
-            console.log('sending', payload);
             client.write(JSON.stringify(payload));
 
             client.on('data', (message) => {
-                console.log('received response');
-                resolve(JSON.parse(message.toString()));
+                const jsonPayload = JSON.parse(message.toString());
+                resolve(jsonPayload);
                 client.destroy();
             });
         });
