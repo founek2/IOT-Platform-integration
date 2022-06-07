@@ -159,8 +159,8 @@ async function main() {
         plat.publishData('sensor', 'tempPreset', json.presetTemp.toString());
     }
 
-    // sync();
-    // setInterval(() => sync(), 1000 * 60 * 5);
+    sync();
+    setInterval(() => sync(), 1000 * 60 * 5);
 }
 
 main();
