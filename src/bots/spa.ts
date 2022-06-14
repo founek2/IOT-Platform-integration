@@ -7,6 +7,7 @@ const config = {
     spaIp: process.env.SPA_IP as string,
     spaPort: Number(process.env.SPA_PORT),
 };
+console.log('config', config);
 
 if (!config.spaIp) console.error('INVALID spa IP');
 

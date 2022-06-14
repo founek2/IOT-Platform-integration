@@ -3,6 +3,7 @@ import { Platform } from '../lib/connection';
 import { ComponentType, PropertyDataType } from '../lib/type';
 const Bravia = require('bravia');
 
+console.log('BRAVIA_IP', process.env.BRAVIA_IP);
 const bravia = new Bravia(process.env.BRAVIA_IP, '80', '5211');
 
 // bravia.system
