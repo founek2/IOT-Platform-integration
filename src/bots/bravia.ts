@@ -42,11 +42,7 @@ async function setPowerStatus(bool: boolean) {
 
 async function main() {
     const plat = new Platform('BOT-TV198111', 'martas', 'Televize');
-    const nodeLight = plat.addNode(
-        'television',
-        'Televize',
-        ComponentType.switch
-    );
+    const nodeLight = plat.addNode('television', 'Televize', ComponentType.switch);
     nodeLight.addProperty({
         propertyId: 'power',
         dataType: PropertyDataType.boolean,
@@ -83,12 +79,7 @@ async function main() {
 
     async function syncPlatform() {
         const power = await getPowerStatus();
-        plat.publishData(
-            'television',
-            'power',
-            power == 'active' ? 'true' : 'false'
-        );
-
+        plat.publishData('television', 'power', power == 'active' ? 'true' : 'false');
         try {
             const volume = await getVolume();
             plat.publishData('television', 'volume', String(volume));
