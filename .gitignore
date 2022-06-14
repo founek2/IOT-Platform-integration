@@ -5,3 +5,4 @@
 /dist
 ecosystem.config.js
 tsconfig.tsbuildinfo
+**/.DS_STORE
