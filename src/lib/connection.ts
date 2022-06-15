@@ -27,7 +27,9 @@ export class Platform extends EventEmitter {
         this.deviceId = process.env.DEVICE_ID || deviceId;
         this.userName = process.env.USERNAME || userName;
         this.deviceName = deviceName;
-        if (localStorage.getItem(deviceId)) this.meta = JSON.parse(localStorage.getItem(deviceId));
+
+        const storedItem = localStorage.getItem(this.deviceId);
+        if (storedItem) this.meta = JSON.parse(storedItem);
     }
 
     init = async () => {
