@@ -1,70 +1,88 @@
-import { Platform } from "../lib/connection";
-import { ComponentType, PropertyClass, PropertyDataType } from "../lib/type";
+import { Platform } from '../lib/connection';
+import { ComponentType, PropertyClass, PropertyDataType } from '../lib/type';
+
+function generateTemp(previousTemp: number = 20) {
+    const change = Math.random();
+
+    if (previousTemp <= 10) {
+        return previousTemp + change;
+    }
+    if (previousTemp >= 35) {
+        return previousTemp - change;
+    }
+    if (Math.random() < 0.5) return previousTemp + change;
+
+    return previousTemp - change;
+}
+const ONE_HOUR = 60 * 60 * 1000;
+function generateNextChangeTimeout() {
+    return Math.floor(Math.random() * ONE_HOUR);
+}
 
 // const configs = [config1, config2, config3, config4, configDevice,];
 async function main() {
-    const plat = new Platform("BOT-423D1", "martas", "Meteostanice");
-    const node = plat.addNode("light", "Světlo", ComponentType.switch);
+    const plat = new Platform('BOT-423D1', 'martas', 'Meteostanice');
+    const node = plat.addNode('light', 'Světlo', ComponentType.switch);
     node.addProperty({
-        propertyId: "power",
+        propertyId: 'power',
         dataType: PropertyDataType.boolean,
-        name: "Světlo",
+        name: 'Světlo',
         settable: true,
         callback: (prop) => {
-            console.log("recieved light:", prop.value)
-        }
-    })
+            console.log('recieved light:', prop.value);
+        },
+    });
 
-    const node2 = plat.addNode("meteo", "Meteo", ComponentType.sensor);
+    const node2 = plat.addNode('meteo', 'Meteo', ComponentType.sensor);
 
     node2.addProperty({
-        name: "Teplota",
-        propertyId: "temp",
+        name: 'Teplota',
+        propertyId: 'temp',
         propertyClass: PropertyClass.Temperature,
-        unitOfMeasurement: "°C",
+        unitOfMeasurement: '°C',
         dataType: PropertyDataType.float,
     });
     node2.addProperty({
-        propertyId: "hum",
+        propertyId: 'hum',
         propertyClass: PropertyClass.Humidity,
-        unitOfMeasurement: "%",
-        name: "Vlhkost",
+        unitOfMeasurement: '%',
+        name: 'Vlhkost',
         dataType: PropertyDataType.float,
     });
     node2.addProperty({
-        propertyId: "volt",
+        propertyId: 'volt',
         propertyClass: PropertyClass.Voltage,
-        unitOfMeasurement: "V",
-        name: "Napětí",
+        unitOfMeasurement: 'V',
+        name: 'Napětí',
         dataType: PropertyDataType.float,
     });
     node2.addProperty({
-        propertyId: "press",
+        propertyId: 'press',
         propertyClass: PropertyClass.Pressure,
-        unitOfMeasurement: "hPa",
-        name: "Tlak",
+        unitOfMeasurement: 'hPa',
+        name: 'Tlak',
         dataType: PropertyDataType.float,
     });
 
     node2.addProperty({
-        propertyId: "temp2",
+        propertyId: 'temp2',
         propertyClass: PropertyClass.Temperature,
-        unitOfMeasurement: "*C",
-        name: "Teplota2",
+        unitOfMeasurement: '*C',
+        name: 'Teplota2',
         dataType: PropertyDataType.float,
     });
 
-    const nodeLight = plat.addNode("gate", "Brána", ComponentType.activator);
+    const nodeLight = plat.addNode('gate', 'Brána', ComponentType.activator);
     nodeLight.addProperty({
-        propertyId: "power",
+        propertyId: 'power',
         dataType: PropertyDataType.enum,
-        name: "Brána",
+        name: 'Brána',
         settable: true,
-        format: "on",
+        format: 'on',
         callback: (prop) => {
-            console.log("recieved gate:", prop.value)
-        }
-    })
+            console.log('recieved gate:', prop.value);
+        },
+    });
 
     // const nodeTry = plat.addNode("test", "Pokus", ComponentType.activator);
     // nodeTry.addProperty({
@@ -80,22 +98,27 @@ async function main() {
     // })
 
     // plat.publishData("volt", "11");
-    plat.on("connect", (client) => {
-        console.log("sending data");
-        plat.publishSensorData("volt", "11");
-        plat.publishSensorData("temp", "21.6");
-        plat.publishSensorData("hum", "74");
-        plat.publishSensorData("press", "112");
-        plat.publishSensorData("temp2", "15.4");
+    plat.on('connect', (client) => {
+        console.log('sending data');
+        plat.publishSensorData('volt', '11');
+        plat.publishSensorData('temp', '21.6');
+        plat.publishSensorData('hum', '74');
+        plat.publishSensorData('press', '112');
+        plat.publishSensorData('temp2', '15.4');
 
         // plat.publishData("test", "kill", "on");
 
-        plat.publishSensorData("volt", "10.5");
-        plat.publishSensorData("temp", "21.6");
-        plat.publishSensorData("hum", "90");
-        plat.publishSensorData("press", "100");
-        plat.publishSensorData("temp2", "15.1");
+        plat.publishSensorData('volt', '10.5');
+        plat.publishSensorData('temp', '21.6');
+        plat.publishSensorData('hum', '90');
+        plat.publishSensorData('press', '100');
+        plat.publishSensorData('temp2', '15.1');
 
+        let lastTemp = 20;
+        setInterval(() => {
+            lastTemp = generateTemp(lastTemp);
+            plat.publishSensorData('temp', lastTemp.toFixed(1));
+        }, 5 * 60 * 1000);
     });
     plat.init();
 }
