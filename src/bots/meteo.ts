@@ -2,7 +2,7 @@ import { Platform } from '../lib/connection';
 import { ComponentType, PropertyClass, PropertyDataType } from '../lib/type';
 
 function generateTemp(previousTemp: number = 20) {
-    const change = Math.random();
+    const change = Math.random() / 2;
 
     if (previousTemp <= 10) {
         return previousTemp + change;
@@ -118,7 +118,7 @@ async function main() {
         setInterval(() => {
             lastTemp = generateTemp(lastTemp);
             plat.publishSensorData('temp', lastTemp.toFixed(1));
-        }, 5 * 60 * 1000);
+        }, 10 * 60 * 1000);
     });
     plat.init();
 }
