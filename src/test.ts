@@ -9,7 +9,7 @@ var client = mqtt.connect('mqtts://v3.iotplatforma.cloud', {
 client.on('connect', function () {
     console.log('connected');
 
-    client.subscribe('#', function (err) {
+    client.subscribe('#', function (err: any) {
         if (err) console.log(err);
     });
 
@@ -23,11 +23,7 @@ client.on('connect', function () {
 
     client.publish('v2/deviceId/light/$name', 'Světlo', options);
     client.publish('v2/deviceId/light/$types', 'switch', options);
-    client.publish(
-        'v2/deviceId/light/$properties',
-        'power,power2,sensor',
-        options
-    );
+    client.publish('v2/deviceId/light/$properties', 'power,power2,sensor', options);
 
     client.publish('v2/deviceId/light/power/$name', 'Vypínač', options);
     client.publish('v2/deviceId/light/power/$datatype', 'boolean', options);
@@ -41,7 +37,7 @@ client.on('connect', function () {
     client.publish('v2/deviceId/light/sensor/$datatype', 'float', options);
 });
 
-client.on('message', function (topic, message) {
+client.on('message', function (topic: string, message: Buffer) {
     // message is Buffer
     console.log(message.toString());
 });
