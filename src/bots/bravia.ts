@@ -22,7 +22,7 @@ const bravia = new Bravia(process.env.BRAVIA_IP, '80', '5211');
 // number
 async function getVolume(): Promise<number | never> {
     const info = await bravia.audio.invoke('getVolumeInformation');
-    return info.find((obj) => obj.target === 'speaker')?.volume;
+    return info.find((obj: any) => obj.target === 'speaker')?.volume;
 }
 // active|
 async function getPowerStatus(): Promise<'active' | 'standby'> {
