@@ -2,7 +2,7 @@ import { Platform } from '../lib/connection';
 import { ComponentType, PropertyDataType } from '../lib/type';
 
 async function main() {
-    const plat = new Platform('BOT-91JK119', 'test', 'RGB pásek');
+    const plat = new Platform('BOT-91JK119', 'martas', 'RGB pásek');
     for (let i = 0; i < 9; ++i) {
         const nodeLight = plat.addNode('segment' + i, 'Segment ' + i, ComponentType.switch);
         nodeLight.addProperty({

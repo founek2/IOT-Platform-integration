@@ -5,7 +5,7 @@ import conf from '../config';
 import { EventEmitter } from 'events';
 import { localStorage } from './storage';
 
-function logger(...args) {
+function logger(...args: any) {
     if (process.env.MODE != 'test') console.log(...args);
 }
 interface store {
@@ -222,7 +222,7 @@ export class Platform extends EventEmitter {
         client.publish(`${this.getDevicePrefix()}/$state`, 'ready');
     };
 
-    publishSensorData = (propertyId, value) => {
+    publishSensorData = (propertyId: string, value: string | Buffer) => {
         const node = this.nodes.find(
             ({ properties, componentType }) =>
                 properties.some((prop) => prop.propertyId === propertyId) && componentType === ComponentType.sensor
@@ -239,7 +239,7 @@ export class Platform extends EventEmitter {
     };
 }
 
-function sleep(ms) {
+function sleep(ms: number) {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
     });

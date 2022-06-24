@@ -28,6 +28,33 @@ async function main() {
         retained: true,
     });
 
+    const nodeVolume = plat.addNode('reciever', 'Reciever', ComponentType.generic);
+    nodeVolume.addProperty({
+        propertyId: 'volume',
+        dataType: PropertyDataType.integer,
+        format: '0:100',
+        name: 'Hlasitost',
+        settable: true,
+        retained: true,
+    });
+
+    nodeVolume.addProperty({
+        propertyId: 'power',
+        dataType: PropertyDataType.boolean,
+        name: 'Zapnuto',
+        settable: true,
+        retained: true,
+    });
+
+    nodeVolume.addProperty({
+        propertyId: 'input',
+        dataType: PropertyDataType.enum,
+        format: 'air_play,net_radio,air_play,jack',
+        name: 'Vstup',
+        settable: true,
+        retained: true,
+    });
+
     plat.init();
 }
 

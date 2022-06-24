@@ -118,7 +118,7 @@ async function main() {
         setInterval(() => {
             lastTemp = generateTemp(lastTemp);
             plat.publishSensorData('temp', lastTemp.toFixed(1));
-        }, 10 * 60 * 1000);
+        }, 20 * 60 * 1000);
     });
     plat.init();
 }
