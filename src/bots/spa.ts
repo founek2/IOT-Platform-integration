@@ -1,4 +1,4 @@
-import { Platform } from '../lib/connection';
+import { DeviceStatus, Platform } from '../lib/connection';
 import { ComponentType, PropertyDataType, PropertyClass } from '../lib/type';
 import { Socket } from 'net';
 import { decodeData, PumpState } from './spaDecoder';
@@ -61,8 +61,9 @@ const Nozzles = {
     }),
 };
 
+const plat = new Platform('BOT-9011CC', 'martas', 'Spáčko');
+
 async function main() {
-    const plat = new Platform('BOT-9011CC', 'martas', 'Spáčko');
     const nodeLight = plat.addNode('control', 'Vířivka', ComponentType.switch);
     nodeLight.addProperty({
         propertyId: 'switch',
@@ -175,7 +176,10 @@ main();
 client.on('close', function () {
     console.log('Connection closed');
 });
-client.on('error', function (err) {
+client.on('error', function (err: any) {
+    if (err.code === 'ETIMEDOUT') {
+        plat.setStatus(DeviceStatus.disconnected);
+    }
     console.error(err);
 });
 // client.setKeepAlive(true, 5000);
@@ -190,6 +194,7 @@ function sendData(payload: any): Promise<{ sid: string; data: string; result: 'o
                 resolve(jsonPayload);
                 client.destroy();
             });
+            plat.setStatus(DeviceStatus.ready);
         });
     });
 }

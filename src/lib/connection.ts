@@ -5,6 +5,18 @@ import conf from '../config';
 import { EventEmitter } from 'events';
 import { localStorage } from './storage';
 
+export enum DeviceStatus {
+    disconnected = 'disconnected',
+    lost = 'lost',
+    error = 'error',
+    alert = 'alert',
+    sleeping = 'sleeping',
+    restarting = 'restarting',
+    ready = 'ready',
+    init = 'init',
+    paired = 'paired',
+}
+
 function logger(...args: any) {
     if (process.env.MODE != 'test') console.log(...args);
 }
@@ -21,6 +33,7 @@ export class Platform extends EventEmitter {
     prefix = 'prefix';
     nodes: Node[] = [];
     sensorCnt = -1;
+    status: DeviceStatus = DeviceStatus.lost;
 
     constructor(deviceId: string, userName: string, deviceName: string) {
         super();
@@ -55,7 +68,7 @@ export class Platform extends EventEmitter {
 
         this.prefix = `v2/${this.userName}`;
 
-        const client = mqtt.connect(conf.MQTT_SERVER_URL, {
+        this.client = mqtt.connect(conf.MQTT_SERVER_URL, {
             username: 'device=' + this.userName + '/' + this.deviceId,
             password: this.meta.apiKey,
             port: conf.MQTT_SERVER_PORT,
@@ -63,18 +76,19 @@ export class Platform extends EventEmitter {
             rejectUnauthorized: false,
             will: {
                 topic: 'v2/' + this.userName + '/' + this.deviceId + '/$state',
-                payload: 'lost',
+                payload: DeviceStatus.lost,
                 retain: true,
                 qos: 1,
             },
         });
+        const client = this.client;
+
         logger('connecting as paired device');
         // client.subscribe("v2/device/" + this.deviceId + "/apiKey");
         client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
 
         // setInterval(() => )
-        client.publish(`${this.getDevicePrefix()}/$state`, 'ready');
-        this.client = client;
+        this.setStatus(DeviceStatus.ready);
 
         this.nodes.forEach(({ nodeId, properties }) => {
             properties.forEach(({ propertyId, settable }) => {
@@ -137,14 +151,18 @@ export class Platform extends EventEmitter {
         node.addProperty(args);
     };
 
-    sendReady = () => {
-        this.client.publish('v2/' + this.userName + '/' + this.deviceId + '/$state', 'ready');
+    setStatus = (status: DeviceStatus) => {
+        if (this.status !== status) {
+            this.status = status;
+
+            if (this.client) this.client.publish(`${this.getDevicePrefix()}/$state`, status);
+        }
     };
 
     getDevicePrefix = () => `${this.prefix}/${this.deviceId}`;
 
     connectPairing = async () => {
-        const client = mqtt.connect(conf.MQTT_SERVER_URL, {
+        this.client = mqtt.connect(conf.MQTT_SERVER_URL, {
             username: 'guest=' + this.deviceId,
             password: this.userName,
             port: conf.MQTT_SERVER_PORT,
@@ -152,11 +170,13 @@ export class Platform extends EventEmitter {
             rejectUnauthorized: false,
             will: {
                 topic: `${this.getDevicePrefix()}/$state`,
-                payload: 'lost',
+                payload: DeviceStatus.lost,
                 retain: true,
                 qos: 1,
             },
         });
+        const client = this.client;
+
         client.on('error', function (err) {
             logger('error', err);
         });
@@ -164,7 +184,7 @@ export class Platform extends EventEmitter {
         client.on('connect', () => {});
 
         logger('connecting as guest to', conf.MQTT_SERVER_URL);
-        client.publish(`${this.getDevicePrefix()}/$state`, 'init');
+        this.setStatus(DeviceStatus.init);
         client.subscribe(`${this.getDevicePrefix()}/$config/apiKey/set`);
         client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
 
@@ -213,13 +233,13 @@ export class Platform extends EventEmitter {
                 localStorage.setItem(this.deviceId, JSON.stringify(this.meta));
                 logger('GOT apiKey -> reconect');
 
-                client.publish(`${this.getDevicePrefix()}/$state`, 'paired');
-                client.publish(`${this.getDevicePrefix()}/$state`, 'disconnected');
+                this.setStatus(DeviceStatus.paired);
+                this.setStatus(DeviceStatus.disconnected);
                 client.end();
                 this.connect();
             }
         });
-        client.publish(`${this.getDevicePrefix()}/$state`, 'ready');
+        this.setStatus(DeviceStatus.ready);
     };
 
     publishSensorData = (propertyId: string, value: string | Buffer) => {
