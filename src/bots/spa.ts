@@ -178,7 +178,7 @@ client.on('close', function () {
 });
 client.on('error', function (err: any) {
     if (err.code === 'ETIMEDOUT') {
-        plat.setStatus(DeviceStatus.disconnected);
+        plat.setStatus(DeviceStatus.alert);
     }
     console.error(err);
 });

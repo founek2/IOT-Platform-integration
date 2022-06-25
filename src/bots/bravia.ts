@@ -1,5 +1,5 @@
 import '../config';
-import { Platform } from '../lib/connection';
+import { DeviceStatus, Platform } from '../lib/connection';
 import { ComponentType, PropertyDataType } from '../lib/type';
 const Bravia = require('bravia');
 
@@ -41,8 +41,9 @@ async function setPowerStatus(bool: boolean) {
     return bravia.system.invoke('setPowerStatus', '1.0', { status: bool });
 }
 
+const plat = new Platform('BOT-TV198111', 'martas', 'Televize');
+
 async function main() {
-    const plat = new Platform('BOT-TV198111', 'martas', 'Televize');
     const nodeLight = plat.addNode('television', 'Televize', ComponentType.switch);
     nodeLight.addProperty({
         propertyId: 'power',
@@ -79,12 +80,20 @@ async function main() {
     await plat.init();
 
     async function syncPlatform() {
-        const power = await getPowerStatus();
-        plat.publishData('television', 'power', power == 'active' ? 'true' : 'false');
         try {
+            const power = await getPowerStatus();
+            plat.publishData('television', 'power', power == 'active' ? 'true' : 'false');
+
             const volume = await getVolume();
             plat.publishData('television', 'volume', String(volume));
-        } catch (e) {}
+
+            plat.setStatus(DeviceStatus.ready);
+        } catch (err) {
+            const e = <any>err;
+            if (e.code === 'EHOSTUNREACH' || e.code === 'ETIMEDOUT') {
+                plat.setStatus(DeviceStatus.alert);
+            } else console.error(e);
+        }
     }
 
     syncPlatform();
