@@ -80,6 +80,7 @@ export class Platform extends EventEmitter {
                 retain: true,
                 qos: 1,
             },
+            keepalive: 30,
         });
         const client = this.client;
 
@@ -174,6 +175,7 @@ export class Platform extends EventEmitter {
                 retain: true,
                 qos: 1,
             },
+            keepalive: 30,
         });
         const client = this.client;
 
