@@ -62,7 +62,7 @@ async function getData() {
 const plat = new Platform('BOT-SOLAX11', 'martas', 'Foto');
 
 async function main() {
-    const nodeLight = plat.addNode('invertor', 'Invertor', ComponentType.sensor);
+    const nodeLight = plat.addNode('invertor', 'Střídač', ComponentType.sensor);
 
     nodeLight.addProperty({
         propertyId: 'feedinpower',
