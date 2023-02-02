@@ -183,7 +183,7 @@ export class Platform extends EventEmitter {
 
         client.on('connect', () => {});
 
-        logger('connecting as guest to', conf.MQTT_SERVER_URL);
+        logger('connecting as guest to', conf.MQTT_SERVER_URL, conf.MQTT_SERVER_PORT, this.userName, this.deviceId);
         this.setStatus(DeviceStatus.init);
         client.subscribe(`${this.getDevicePrefix()}/$config/apiKey/set`);
         client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
@@ -239,6 +239,7 @@ export class Platform extends EventEmitter {
                 this.connect();
             }
         });
+
         this.setStatus(DeviceStatus.ready);
     };
 
