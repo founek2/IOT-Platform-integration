@@ -3,12 +3,12 @@
         "rootDir": "src",
         "outDir": "dist",
         "module": "commonjs",
-        "target": "es5",
+        "target": "es2020",
         "strict": true,
         "strictPropertyInitialization": false,
         "moduleResolution": "node",
         "strictNullChecks": true,
-        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
         "lib": [
             "esnext.asynciterable",
             "DOM", // were problems with @testing-library
