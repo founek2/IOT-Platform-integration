@@ -146,7 +146,7 @@ async function main() {
     }
 
     syncPlatform();
-    setInterval(syncPlatform, 20 * 1000);
+    setInterval(syncPlatform, 40 * 1000);
 }
 
 main();
