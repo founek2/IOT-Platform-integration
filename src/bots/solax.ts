@@ -98,10 +98,10 @@ async function syncPlatform() {
         }
 
         plat.publishSensorData('feedinpower', data.feedinpower.toFixed(0));
-        plat.publishSensorData('feedinpowerM2', data.feedinpowerM2.toFixed(0));
         plat.publishSensorData('acpower', data.acpower.toFixed(0));
         plat.publishSensorData('soc', data.soc.toFixed(0));
         plat.publishSensorData('yieldtoday', data.yieldtoday.toFixed(0));
+        plat.publishSensorData('yieldtotal', data.yieldtotal.toFixed(0));
         plat.publishSensorData('batPower', data.batPower.toFixed(0));
         plat.publishSensorData('batStatus', data.batStatus);
         plat.publishSensorData('consumeenergy', data.consumeenergy.toFixed(0));
