@@ -250,7 +250,7 @@ export class Platform extends EventEmitter {
             ({ properties, componentType }) =>
                 properties.some((prop) => prop.propertyId === propertyId) && componentType === ComponentType.sensor
         );
-        if (!node) return logger('unable to locate sensor node');
+        if (!node) return logger(`unable to locate sensor node with property ${propertyId}`);
         if (!this.client) return logger('Not connected');
 
         this.client.publish(`${this.getDevicePrefix()}/${node.nodeId}/${propertyId}`, value);
