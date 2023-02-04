@@ -113,6 +113,7 @@ async function syncPlatform() {
 
 async function main() {
     const nodeLight = plat.addNode('invertor', 'Střídač', ComponentType.sensor);
+    const nodeBattery = plat.addNode('battery', 'Baterie', ComponentType.sensor);
 
     nodeLight.addProperty({
         propertyId: 'feedinpower',
@@ -136,14 +137,6 @@ async function main() {
         dataType: PropertyDataType.float,
         unitOfMeasurement: 'W',
         name: 'Výkon',
-    });
-
-    nodeLight.addProperty({
-        propertyId: 'soc',
-        propertyClass: PropertyClass.Pressure,
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: '%',
-        name: 'Baterie',
     });
 
     nodeLight.addProperty({
@@ -171,17 +164,26 @@ async function main() {
     });
 
     nodeLight.addProperty({
-        propertyId: 'batStatus',
-        dataType: PropertyDataType.float,
-        name: 'Baterie status',
-    });
-
-    nodeLight.addProperty({
         propertyId: 'consumeenergy',
         dataType: PropertyDataType.float,
         unitOfMeasurement: 'W',
         propertyClass: PropertyClass.Voltage,
         name: 'Spotřeba střídače',
+    });
+
+    // baterry
+    nodeBattery.addProperty({
+        propertyId: 'soc',
+        propertyClass: PropertyClass.Pressure,
+        dataType: PropertyDataType.float,
+        unitOfMeasurement: '%',
+        name: 'Baterie',
+    });
+
+    nodeBattery.addProperty({
+        propertyId: 'batStatus',
+        dataType: PropertyDataType.float,
+        name: 'Baterie status',
     });
 
     await plat.init();
