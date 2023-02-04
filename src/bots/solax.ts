@@ -57,10 +57,10 @@ interface SolaxResponse {
         inverterStatus: string;
         uploadTime: string;
         batPower: number; //  Výkon baterie [W]
-        powerdc1: number;
-        powerdc2: number;
-        powerdc3: null;
-        powerdc4: null;
+        powerdc1: number | null;
+        powerdc2: number | null;
+        powerdc3: number | null;
+        powerdc4: number | null;
         batStatus: string;
     };
 }
@@ -105,6 +105,12 @@ async function syncPlatform() {
         plat.publishSensorData('batPower', data.batPower.toFixed(0));
         plat.publishSensorData('batStatus', data.batStatus);
         plat.publishSensorData('consumeenergy', data.consumeenergy.toFixed(0));
+        plat.publishSensorData('powerdc1', (data.powerdc1 || 0).toFixed(0));
+        plat.publishSensorData('powerdc2', (data.powerdc2 || 0).toFixed(0));
+        plat.publishSensorData(
+            'powerdc',
+            ((data.powerdc1 || 0) + (data.powerdc2 || 0) + (data.powerdc3 || 0) + (data.powerdc4 || 0)).toFixed(0)
+        );
     } catch (err) {
         console.error(err);
     }
@@ -120,6 +126,14 @@ async function main() {
         unitOfMeasurement: 'W',
         propertyClass: PropertyClass.Voltage,
         name: 'Výstup do sítě',
+    });
+
+    nodeLight.addProperty({
+        propertyId: 'powerdc',
+        propertyClass: PropertyClass.Voltage,
+        dataType: PropertyDataType.float,
+        unitOfMeasurement: 'W',
+        name: 'Okamžitý Výkon FE pole',
     });
 
     nodeLight.addProperty({
@@ -175,6 +189,18 @@ async function main() {
         propertyId: 'batStatus',
         dataType: PropertyDataType.float,
         name: 'Baterie status',
+    });
+
+    nodeBattery.addProperty({
+        propertyId: 'powerdc1',
+        dataType: PropertyDataType.float,
+        name: 'Okamžitý výkon FE pole 1',
+    });
+
+    nodeBattery.addProperty({
+        propertyId: 'powerdc2',
+        dataType: PropertyDataType.float,
+        name: 'Okamžitý výkon FE pole 2',
     });
 
     await plat.init();
