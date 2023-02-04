@@ -102,7 +102,6 @@ async function syncPlatform() {
         plat.publishSensorData('acpower', data.acpower.toFixed(0));
         plat.publishSensorData('soc', data.soc.toFixed(0));
         plat.publishSensorData('yieldtoday', data.yieldtoday.toFixed(0));
-        plat.publishSensorData('yieldtotal', data.yieldtotal.toFixed(0));
         plat.publishSensorData('batPower', data.batPower.toFixed(0));
         plat.publishSensorData('batStatus', data.batStatus);
         plat.publishSensorData('consumeenergy', data.consumeenergy.toFixed(0));
@@ -124,19 +123,11 @@ async function main() {
     });
 
     nodeLight.addProperty({
-        propertyId: 'feedinpowerM2',
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'W',
-        propertyClass: PropertyClass.Voltage,
-        name: 'Výroba',
-    });
-
-    nodeLight.addProperty({
         propertyId: 'acpower',
         propertyClass: PropertyClass.Voltage,
         dataType: PropertyDataType.float,
         unitOfMeasurement: 'W',
-        name: 'Výkon',
+        name: 'Okamžitý Výkon střídače',
     });
 
     nodeLight.addProperty({
@@ -148,19 +139,11 @@ async function main() {
     });
 
     nodeLight.addProperty({
-        propertyId: 'yieldtotal',
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'kW',
-        propertyClass: PropertyClass.Voltage,
-        name: 'Celková výroba',
-    });
-
-    nodeLight.addProperty({
         propertyId: 'batPower',
         dataType: PropertyDataType.float,
         unitOfMeasurement: 'W',
         propertyClass: PropertyClass.Voltage,
-        name: 'Výkon baterie',
+        name: 'Tok z/do baterie',
     });
 
     nodeLight.addProperty({
@@ -169,6 +152,14 @@ async function main() {
         unitOfMeasurement: 'W',
         propertyClass: PropertyClass.Voltage,
         name: 'Spotřeba střídače',
+    });
+
+    nodeLight.addProperty({
+        propertyId: 'yieldtotal',
+        dataType: PropertyDataType.float,
+        unitOfMeasurement: 'kW',
+        propertyClass: PropertyClass.Voltage,
+        name: 'Celková výroba',
     });
 
     // baterry
