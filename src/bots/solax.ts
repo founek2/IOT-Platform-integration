@@ -43,8 +43,8 @@ interface SolaxResponse {
         inverterSN: string;
         sn: string;
         acpower: number; // výkon střídače co přes něj teče sem i tam [W]
-        yieldtoday: number; //  dnešní výroba [kW]
-        yieldtotal: number; //  celková výroba [kW]
+        yieldtoday: number; //  dnešní výroba [kWh]
+        yieldtotal: number; //  celková výroba [kWh]
         feedinpower: number; //  co leze z baráku [W]
         feedinenergy: number; //  co leze z baráku [kWh]
         consumeenergy: number; //  Spotřeba střídače [kWh]
@@ -100,7 +100,7 @@ async function syncPlatform() {
         plat.publishSensorData('feedinpower', data.feedinpower.toFixed(0));
         plat.publishSensorData('acpower', data.acpower.toFixed(0));
         plat.publishSensorData('soc', data.soc.toFixed(0));
-        plat.publishSensorData('yieldtoday', data.yieldtoday.toFixed(0));
+        plat.publishSensorData('yieldtoday', data.yieldtoday.toFixed(1));
         plat.publishSensorData('yieldtotal', data.yieldtotal.toFixed(0));
         plat.publishSensorData('batPower', data.batPower.toFixed(0));
         plat.publishSensorData('batStatus', data.batStatus);
@@ -147,7 +147,7 @@ async function main() {
     nodeLight.addProperty({
         propertyId: 'yieldtoday',
         dataType: PropertyDataType.float,
-        unitOfMeasurement: 'kW',
+        unitOfMeasurement: 'kWh',
         propertyClass: PropertyClass.Voltage,
         name: 'Dnešní výroba',
     });
@@ -171,7 +171,7 @@ async function main() {
     nodeLight.addProperty({
         propertyId: 'yieldtotal',
         dataType: PropertyDataType.float,
-        unitOfMeasurement: 'kW',
+        unitOfMeasurement: 'kWh',
         propertyClass: PropertyClass.Voltage,
         name: 'Celková výroba',
     });
