@@ -104,6 +104,7 @@ async function syncPlatform() {
         plat.publishSensorData('yieldtotal', data.yieldtotal.toFixed(0));
         plat.publishSensorData('batPower', data.batPower.toFixed(0));
         plat.publishSensorData('batStatus', data.batStatus);
+        plat.publishSensorData('feedinenergy', data.feedinenergy.toFixed(0));
         plat.publishSensorData('consumeenergy', data.consumeenergy.toFixed(0));
         plat.publishSensorData('powerdc1', (data.powerdc1 || 0).toFixed(0));
         plat.publishSensorData('powerdc2', (data.powerdc2 || 0).toFixed(0));
@@ -163,9 +164,17 @@ async function main() {
     nodeLight.addProperty({
         propertyId: 'consumeenergy',
         dataType: PropertyDataType.float,
-        unitOfMeasurement: 'W',
+        unitOfMeasurement: 'kWh',
         propertyClass: PropertyClass.Voltage,
-        name: 'Spotřeba střídače',
+        name: 'Celkový odběr ze sítě',
+    });
+
+    nodeLight.addProperty({
+        propertyId: 'feedinenergy',
+        dataType: PropertyDataType.float,
+        unitOfMeasurement: 'kWh',
+        propertyClass: PropertyClass.Voltage,
+        name: 'Celkem dodáno do sítě',
     });
 
     nodeLight.addProperty({
