@@ -66,6 +66,7 @@ export class Platform extends EventEmitter {
             return;
         }
 
+        this.setStatus(DeviceStatus.ready);
         this.prefix = `v2/${this.userName}`;
 
         this.client = mqtt.connect(conf.MQTT_SERVER_URL, {
@@ -87,9 +88,11 @@ export class Platform extends EventEmitter {
         logger('connecting as paired device');
         // client.subscribe("v2/device/" + this.deviceId + "/apiKey");
         client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
+        client.on('connect', () => {
+            this.client.publish(`${this.getDevicePrefix()}/$state`, this.status);
+        });
 
         // setInterval(() => )
-        this.setStatus(DeviceStatus.ready);
 
         this.nodes.forEach(({ nodeId, properties }) => {
             properties.forEach(({ propertyId, settable }) => {
@@ -153,16 +156,14 @@ export class Platform extends EventEmitter {
     };
 
     setStatus = (status: DeviceStatus) => {
-        if (this.status !== status) {
-            this.status = status;
-
-            if (this.client) this.client.publish(`${this.getDevicePrefix()}/$state`, status);
-        }
+        this.status = status;
     };
 
     getDevicePrefix = () => `${this.prefix}/${this.deviceId}`;
 
     connectPairing = async () => {
+        logger('connecting as guest to', conf.MQTT_SERVER_URL, conf.MQTT_SERVER_PORT, this.userName, this.deviceId);
+        this.setStatus(DeviceStatus.ready);
         this.client = mqtt.connect(conf.MQTT_SERVER_URL, {
             username: 'guest=' + this.deviceId,
             password: this.userName,
@@ -183,10 +184,10 @@ export class Platform extends EventEmitter {
             logger('error', err);
         });
 
-        client.on('connect', () => {});
+        client.on('connect', () => {
+            this.client.publish(`${this.getDevicePrefix()}/$state`, this.status);
+        });
 
-        logger('connecting as guest to', conf.MQTT_SERVER_URL, conf.MQTT_SERVER_PORT, this.userName, this.deviceId);
-        this.setStatus(DeviceStatus.init);
         client.subscribe(`${this.getDevicePrefix()}/$config/apiKey/set`);
         client.subscribe(`${this.getDevicePrefix()}/$cmd/set`);
 
