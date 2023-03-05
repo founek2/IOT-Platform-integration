@@ -67,7 +67,7 @@ interface SolaxResponse {
 
 async function getData() {
     return fetch(
-        `https://www.solaxcloud.com/proxyApp/proxy/api/getRealtimeInfo.do?tokenId=${API_TOKEN}&sn=${REGISTRATION_NUMBER}`
+        `https://www.solaxcloud.com:9443/proxy/api/getRealtimeInfo.do?tokenId=${API_TOKEN}&sn=${REGISTRATION_NUMBER}`
     )
         .then((res) => {
             if (!res.ok) {
