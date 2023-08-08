@@ -1,10 +1,14 @@
 import '../config';
 import { DeviceStatus, Platform } from '../lib/connection';
 import { ComponentType, PropertyDataType } from '../lib/type';
+import { exec } from "node:child_process";
+
 const Bravia = require('bravia');
 
+const { BRAVIA_IP } = process.env
+
 console.log('BRAVIA_IP', process.env.BRAVIA_IP);
-const bravia = new Bravia(process.env.BRAVIA_IP, '80', '5211');
+const bravia = new Bravia(BRAVIA_IP, '80', '5211');
 
 // bravia.system
 //   .getMethodTypes()
@@ -64,6 +68,28 @@ async function main() {
         settable: true,
         callback: (prop) => {
             setVolume(prop.value);
+        },
+    });
+
+    nodeLight.addProperty({
+        propertyId: 'view',
+        dataType: PropertyDataType.enum,
+        format: "kamera_1,kamera_2,nic",
+        name: 'Zobrazit',
+        settable: true,
+        callback: (prop) => {
+            if (prop.value === "kamera_1")
+                exec(`catt --device ${BRAVIA_IP} cast_site "http://192.168.10.88:8888/camera_1/mjpeg-stream"`, (err) => {
+                    console.error(err)
+                })
+            else if (prop.value === "kamera_2")
+                exec(`catt --device ${BRAVIA_IP} cast_site "http://192.168.10.88:8888/camera_2/mjpeg-stream"`, (err) => {
+                    console.error(err)
+                })
+            else if (prop.value === "nic")
+                exec(`catt --device ${BRAVIA_IP} stop"`, (err) => {
+                    console.error(err)
+                })
         },
     });
 
