@@ -87,7 +87,7 @@ async function main() {
                     console.error(err)
                 })
             else if (prop.value === "nic")
-                exec(`catt --device ${BRAVIA_IP} stop"`, (err) => {
+                exec(`catt --device ${BRAVIA_IP} stop`, (err) => {
                     console.error(err)
                 })
         },
