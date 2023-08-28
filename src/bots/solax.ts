@@ -75,7 +75,8 @@ function getData() {
 
             return res.json();
         })
-        .then((body: SolaxResponse) => {
+        .then(data => {
+            const body = data as SolaxResponse;
             if (!body.success) {
                 throw Error(`Invalid response body: ${JSON.stringify(body)}`);
             }
