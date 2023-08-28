@@ -8,10 +8,9 @@ const config = {
     spaIp: Deno.env.get("SPA_IP") as string,
     spaPort: Number(Deno.env.get("SPA_PORT")),
 };
-console.log('config', config);
 
 assert(config.spaIp, 'missing env SPA_IP');
-assert(!Number.isFinite(config.spaPort), 'missing env SPA_PORT');
+assert(Number.isFinite(config.spaPort), 'missing env SPA_PORT');
 
 const client = new Socket();
 
