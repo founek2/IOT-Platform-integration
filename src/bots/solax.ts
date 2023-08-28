@@ -1,15 +1,14 @@
-import '../config';
-import { DeviceStatus, Platform } from '../lib/connection';
-import { ComponentType, PropertyClass, PropertyDataType } from '../lib/type';
-import fetch from 'node-fetch';
-import assert from 'assert';
-import mqtt from 'mqtt';
+import config from '../config.ts';
+import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/mod.ts"
+import fetch from 'npm:node-fetch@3.3.2';
+import { assert } from "https://deno.land/std@0.200.0/assert/mod.ts";
+import mqtt from 'npm:mqtt@5';
 
-var MIN_30 = 30 * 60 * 1000; /* ms */
-var SEC_10 = 10 * 1000; /* ms */
-const API_TOKEN = process.env.API_TOKEN;
-const REGISTRATION_NUMBER = process.env.REGISTRATION_NUMBER;
-const MQTT_PASSWORD = process.env.SOLAX_MQTT_PASSWORD;
+const MIN_30 = 30 * 60 * 1000; /* ms */
+const SEC_10 = 10 * 1000; /* ms */
+const API_TOKEN = Deno.env.get("API_TOKEN");
+const REGISTRATION_NUMBER = Deno.env.get("REGISTRATION_NUMBER");
+const MQTT_PASSWORD = Deno.env.get("SOLAX_MQTT_PASSWORD");
 
 assert(API_TOKEN, 'missing env API_TOKEN');
 assert(REGISTRATION_NUMBER, 'missing env REGISTRATION_NUMBER');
@@ -65,7 +64,7 @@ interface SolaxResponse {
     };
 }
 
-async function getData() {
+function getData() {
     return fetch(
         `https://www.solaxcloud.com:9443/proxy/api/getRealtimeInfo.do?tokenId=${API_TOKEN}&sn=${REGISTRATION_NUMBER}`
     )
@@ -85,7 +84,101 @@ async function getData() {
         });
 }
 
-const plat = new Platform('BOT-SOLAX11', 'martas', 'Foto');
+const plat = new Platform('BOT-SOLAX11', 'martas', 'Foto', config.MQTT_SERVER_URL, config.MQTT_SERVER_PORT);
+
+const nodeLight = plat.addNode('invertor', 'Střídač', ComponentType.sensor);
+const nodeBattery = plat.addNode('battery', 'Baterie', ComponentType.sensor);
+
+const feedInPowerProperty = nodeLight.addProperty({
+    propertyId: 'feedinpower',
+    dataType: PropertyDataType.float,
+    unitOfMeasurement: 'W',
+    propertyClass: PropertyClass.Voltage,
+    name: 'Výstup do sítě',
+});
+
+const powerDcProperty = nodeLight.addProperty({
+    propertyId: 'powerdc',
+    propertyClass: PropertyClass.Voltage,
+    dataType: PropertyDataType.float,
+    unitOfMeasurement: 'W',
+    name: 'Okamžitý Výkon FE pole',
+});
+
+const acPowerProeprty = nodeLight.addProperty({
+    propertyId: 'acpower',
+    propertyClass: PropertyClass.Voltage,
+    dataType: PropertyDataType.float,
+    unitOfMeasurement: 'W',
+    name: 'Okamžitý Výkon střídače',
+});
+
+const yieldTodayProperty = nodeLight.addProperty({
+    propertyId: 'yieldtoday',
+    dataType: PropertyDataType.float,
+    unitOfMeasurement: 'kWh',
+    propertyClass: PropertyClass.Voltage,
+    name: 'Dnešní výroba',
+});
+
+const batPowerProperty = nodeLight.addProperty({
+    propertyId: 'batPower',
+    dataType: PropertyDataType.float,
+    unitOfMeasurement: 'W',
+    propertyClass: PropertyClass.Voltage,
+    name: 'Tok z/do baterie',
+});
+
+const consumeEnergyProperty = nodeLight.addProperty({
+    propertyId: 'consumeenergy',
+    dataType: PropertyDataType.float,
+    unitOfMeasurement: 'kWh',
+    propertyClass: PropertyClass.Voltage,
+    name: 'Celkový odběr ze sítě',
+});
+
+const feedInEnergyProperty = nodeLight.addProperty({
+    propertyId: 'feedinenergy',
+    dataType: PropertyDataType.float,
+    unitOfMeasurement: 'kWh',
+    propertyClass: PropertyClass.Voltage,
+    name: 'Celkem dodáno do sítě',
+});
+
+const yieldTotalProperty = nodeLight.addProperty({
+    propertyId: 'yieldtotal',
+    dataType: PropertyDataType.float,
+    unitOfMeasurement: 'kWh',
+    propertyClass: PropertyClass.Voltage,
+    name: 'Celková výroba',
+});
+
+// baterry
+const socProperty = nodeBattery.addProperty({
+    propertyId: 'soc',
+    propertyClass: PropertyClass.Pressure,
+    dataType: PropertyDataType.float,
+    unitOfMeasurement: '%',
+    name: 'Baterie',
+});
+
+const batStatusProperty = nodeBattery.addProperty({
+    propertyId: 'batStatus',
+    dataType: PropertyDataType.float,
+    name: 'Baterie status',
+});
+
+const powerDc1Property = nodeBattery.addProperty({
+    propertyId: 'powerdc1',
+    dataType: PropertyDataType.float,
+    name: 'Okamžitý výkon FE pole 1',
+});
+
+const powerDc2Property = nodeBattery.addProperty({
+    propertyId: 'powerdc2',
+    dataType: PropertyDataType.float,
+    name: 'Okamžitý výkon FE pole 2',
+});
 
 let lastUploadTime: string | undefined;
 async function syncPlatform() {
@@ -97,19 +190,19 @@ async function syncPlatform() {
             lastUploadTime = data.uploadTime;
         }
 
-        plat.publishSensorData('feedinpower', data.feedinpower.toFixed(0));
-        plat.publishSensorData('acpower', data.acpower.toFixed(0));
-        plat.publishSensorData('soc', data.soc.toFixed(0));
-        plat.publishSensorData('yieldtoday', data.yieldtoday.toFixed(1));
-        plat.publishSensorData('yieldtotal', data.yieldtotal.toFixed(0));
-        plat.publishSensorData('batPower', data.batPower.toFixed(0));
-        plat.publishSensorData('batStatus', data.batStatus);
-        plat.publishSensorData('feedinenergy', data.feedinenergy.toFixed(0));
-        plat.publishSensorData('consumeenergy', data.consumeenergy.toFixed(0));
-        plat.publishSensorData('powerdc1', (data.powerdc1 || 0).toFixed(0));
-        plat.publishSensorData('powerdc2', (data.powerdc2 || 0).toFixed(0));
-        plat.publishSensorData(
-            'powerdc',
+        feedInPowerProperty.setValue(data.feedinpower.toFixed(0))
+        acPowerProeprty.setValue(data.acpower.toFixed(0))
+        socProperty.setValue(data.soc.toFixed(0))
+        yieldTodayProperty.setValue(data.yieldtoday.toFixed(1))
+        yieldTotalProperty.setValue(data.yieldtotal.toFixed(0))
+        batPowerProperty.setValue(data.batPower.toFixed(0))
+        batStatusProperty.setValue(data.batStatus);
+        feedInEnergyProperty.setValue(data.feedinenergy.toFixed(0))
+        consumeEnergyProperty.setValue(data.consumeenergy.toFixed(0))
+        powerDc1Property.setValue((data.powerdc1 || 0).toFixed(0));
+        powerDc2Property.setValue((data.powerdc2 || 0).toFixed(0))
+
+        powerDcProperty.setValue(
             ((data.powerdc1 || 0) + (data.powerdc2 || 0) + (data.powerdc3 || 0) + (data.powerdc4 || 0)).toFixed(0)
         );
     } catch (err) {
@@ -117,110 +210,13 @@ async function syncPlatform() {
     }
 }
 
-async function main() {
-    const nodeLight = plat.addNode('invertor', 'Střídač', ComponentType.sensor);
-    const nodeBattery = plat.addNode('battery', 'Baterie', ComponentType.sensor);
+plat.init();
 
-    nodeLight.addProperty({
-        propertyId: 'feedinpower',
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'W',
-        propertyClass: PropertyClass.Voltage,
-        name: 'Výstup do sítě',
-    });
+syncPlatform();
+setInterval(() => {
+    if (!lastUploadTime || Date.now() - new Date(lastUploadTime).getTime() > MIN_30) {
+        console.log('No update for 30 mins -> forcing sync');
+        syncPlatform();
+    }
+}, 30 * 60 * 1000);
 
-    nodeLight.addProperty({
-        propertyId: 'powerdc',
-        propertyClass: PropertyClass.Voltage,
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'W',
-        name: 'Okamžitý Výkon FE pole',
-    });
-
-    nodeLight.addProperty({
-        propertyId: 'acpower',
-        propertyClass: PropertyClass.Voltage,
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'W',
-        name: 'Okamžitý Výkon střídače',
-    });
-
-    nodeLight.addProperty({
-        propertyId: 'yieldtoday',
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'kWh',
-        propertyClass: PropertyClass.Voltage,
-        name: 'Dnešní výroba',
-    });
-
-    nodeLight.addProperty({
-        propertyId: 'batPower',
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'W',
-        propertyClass: PropertyClass.Voltage,
-        name: 'Tok z/do baterie',
-    });
-
-    nodeLight.addProperty({
-        propertyId: 'consumeenergy',
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'kWh',
-        propertyClass: PropertyClass.Voltage,
-        name: 'Celkový odběr ze sítě',
-    });
-
-    nodeLight.addProperty({
-        propertyId: 'feedinenergy',
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'kWh',
-        propertyClass: PropertyClass.Voltage,
-        name: 'Celkem dodáno do sítě',
-    });
-
-    nodeLight.addProperty({
-        propertyId: 'yieldtotal',
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: 'kWh',
-        propertyClass: PropertyClass.Voltage,
-        name: 'Celková výroba',
-    });
-
-    // baterry
-    nodeBattery.addProperty({
-        propertyId: 'soc',
-        propertyClass: PropertyClass.Pressure,
-        dataType: PropertyDataType.float,
-        unitOfMeasurement: '%',
-        name: 'Baterie',
-    });
-
-    nodeBattery.addProperty({
-        propertyId: 'batStatus',
-        dataType: PropertyDataType.float,
-        name: 'Baterie status',
-    });
-
-    nodeBattery.addProperty({
-        propertyId: 'powerdc1',
-        dataType: PropertyDataType.float,
-        name: 'Okamžitý výkon FE pole 1',
-    });
-
-    nodeBattery.addProperty({
-        propertyId: 'powerdc2',
-        dataType: PropertyDataType.float,
-        name: 'Okamžitý výkon FE pole 2',
-    });
-
-    await plat.init();
-
-    syncPlatform();
-    setInterval(() => {
-        if (!lastUploadTime || Date.now() - new Date(lastUploadTime).getTime() > MIN_30) {
-            console.log('No update for 30 mins -> forcing sync');
-            syncPlatform();
-        }
-    }, 30 * 60 * 1000);
-}
-
-main();
