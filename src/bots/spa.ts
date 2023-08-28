@@ -1,19 +1,17 @@
-import { DeviceStatus, Platform } from '../lib/connection';
-import { ComponentType, PropertyDataType, PropertyClass } from '../lib/type';
-import { Socket } from 'net';
-import { decodeData, PumpState } from './spaDecoder';
+import globalConfig from '../config.ts';
+import { Platform, ComponentType, PropertyDataType, PropertyClass, DeviceStatus } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/mod.ts"
+import { Socket } from 'node:net';
+import { decodeData, PumpState } from './spaDecoder.ts';
+import { assert } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 const config = {
-    spaIp: process.env.SPA_IP as string,
-    spaPort: Number(process.env.SPA_PORT),
+    spaIp: Deno.env.get("SPA_IP") as string,
+    spaPort: Number(Deno.env.get("SPA_PORT")),
 };
 console.log('config', config);
 
-if (!config.spaIp) console.error('INVALID spa IP');
-
-if (!config.spaPort) console.error('INVALID spa PORT');
-
-if (!config.spaPort || !config.spaIp) process.exit(1);
+assert(config.spaIp, 'missing env SPA_IP');
+assert(!Number.isFinite(config.spaPort), 'missing env SPA_PORT');
 
 const client = new Socket();
 
@@ -61,124 +59,89 @@ const Nozzles = {
     }),
 };
 
-const plat = new Platform('BOT-9011CC', 'martas', 'Spáčko');
+const plat = new Platform('BOT-9011CC', 'martas', 'Spáčko', globalConfig.MQTT_SERVER_URL, globalConfig.MQTT_SERVER_PORT);
 
-async function main() {
-    const nodeLight = plat.addNode('control', 'Vířivka', ComponentType.switch);
-    nodeLight.addProperty({
-        propertyId: 'switch',
-        dataType: PropertyDataType.boolean,
-        name: 'Ohřev',
-        settable: true,
-        callback: async function (prop) {
-            const response = await sendData(FiltrationAndHeater.off);
-            sync(response.data);
-        },
-    });
-    nodeLight.addProperty({
-        propertyId: 'bubbles',
-        dataType: PropertyDataType.boolean,
-        name: 'Bubliny',
-        settable: true,
-        callback: async function (prop) {
-            const response = await sendData(Bubbles.on);
-            sync(response.data);
-        },
-    });
 
-    nodeLight.addProperty({
-        propertyId: 'nozzles',
-        dataType: PropertyDataType.boolean,
-        name: 'Trysky',
-        settable: true,
-        callback: async function (prop) {
-            const response = await sendData(Nozzles.on);
-            sync(response.data);
-        },
-    });
+const nodeLight = plat.addNode('control', 'Vířivka', ComponentType.switch);
 
-    nodeLight.addProperty({
-        propertyId: 'pump',
-        dataType: PropertyDataType.boolean,
-        name: 'Filtrace',
-        settable: true,
-        callback: async function (prop) {
-            const response = await sendData(Filtration.on);
-            sync(response.data);
-        },
-    });
+const switchProperty = nodeLight.addProperty({
+    propertyId: 'switch',
+    dataType: PropertyDataType.boolean,
+    name: 'Ohřev',
+    settable: true,
+    callback: async function (prop) {
+        const response = await sendData(FiltrationAndHeater.off);
+        sync(response.data);
+    },
+});
+const bubblesProperty = nodeLight.addProperty({
+    propertyId: 'bubbles',
+    dataType: PropertyDataType.boolean,
+    name: 'Bubliny',
+    settable: true,
+    callback: async function (prop) {
+        const response = await sendData(Bubbles.on);
+        sync(response.data);
+    },
+});
 
-    nodeLight.addProperty({
-        propertyId: 'electrolysis',
-        dataType: PropertyDataType.boolean,
-        name: 'Elektrolýza',
-        // settable: true,
-        // callback: function (prop) {
-        // if (prop.value === 'true') sendData(Alimentation.on);
-        // else sendData(Alimentation.off);
-        // },
-    });
+const nozzlesProperty = nodeLight.addProperty({
+    propertyId: 'nozzles',
+    dataType: PropertyDataType.boolean,
+    name: 'Trysky',
+    settable: true,
+    callback: async function (prop) {
+        const response = await sendData(Nozzles.on);
+        sync(response.data);
+    },
+});
 
-    const nodeSwitch = plat.addNode('sensor', 'Teplota', ComponentType.sensor);
-    nodeSwitch.addProperty({
-        propertyId: 'tempCurrent',
-        dataType: PropertyDataType.float,
-        name: 'Teplota',
-        propertyClass: PropertyClass.Temperature,
-        unitOfMeasurement: '°C',
-    });
+const pumpProperty = nodeLight.addProperty({
+    propertyId: 'pump',
+    dataType: PropertyDataType.boolean,
+    name: 'Filtrace',
+    settable: true,
+    callback: async function (prop) {
+        const response = await sendData(Filtration.on);
+        sync(response.data);
+    },
+});
 
-    nodeSwitch.addProperty({
-        propertyId: 'tempPreset',
-        dataType: PropertyDataType.float,
-        name: 'Cíl',
-        propertyClass: PropertyClass.Temperature,
-        unitOfMeasurement: '°C',
-    });
+const electrolysisProperty = nodeLight.addProperty({
+    propertyId: 'electrolysis',
+    dataType: PropertyDataType.boolean,
+    name: 'Elektrolýza',
+    // settable: true,
+    // callback: function (prop) {
+    // if (prop.value === 'true') sendData(Alimentation.on);
+    // else sendData(Alimentation.off);
+    // },
+});
 
-    // plat.publishData("volt", "11");
-    // plat.on('connect', (client) => {});
-    plat.init();
+const nodeSwitch = plat.addNode('sensor', 'Teplota', ComponentType.sensor);
+const tempCurrentProperty = nodeSwitch.addProperty({
+    propertyId: 'tempCurrent',
+    dataType: PropertyDataType.float,
+    name: 'Teplota',
+    propertyClass: PropertyClass.Temperature,
+    unitOfMeasurement: '°C',
+});
 
-    // const response = await sendData(StatusPayload);
-    // console.log('res', response, decodeData(response.data));
+const tempPresetProperty = nodeSwitch.addProperty({
+    propertyId: 'tempPreset',
+    dataType: PropertyDataType.float,
+    name: 'Cíl',
+    propertyClass: PropertyClass.Temperature,
+    unitOfMeasurement: '°C',
+});
 
-    async function sync(responseData?: string) {
-        let data = responseData;
-        if (!data) {
-            const response = await sendData(StatusPayload);
-            data = response.data;
-        }
-
-        const json = decodeData(data);
-        plat.publishData('control', 'bubbles', json.bubbles.toString());
-        plat.publishData('control', 'nozzles', json.nozzles.toString());
-        plat.publishData('control', 'pump', json.pump.toString());
-        plat.publishData('control', 'switch', (json.pumpState == PumpState.pumpAndHeater).toString());
-        plat.publishData('control', 'electrolysis', json.electrolysis.toString());
-
-        plat.publishData('sensor', 'tempCurrent', json.currentTemp.toString());
-        plat.publishData('sensor', 'tempPreset', json.presetTemp.toString());
-    }
-
-    sync();
-    setInterval(() => sync(), 1000 * 60 * 5);
-}
-
-main();
-
-// client.on('data', function (data) {
-//     console.log('Received: ' + data);
-//     client.destroy(); // kill client after server's response
-// });
-// client.connect(config.spaPort, config.spaIp)
 
 client.on('close', function () {
     console.log('Connection closed');
 });
 client.on('error', function (err: any) {
     if (err.code === 'ETIMEDOUT') {
-        plat.setStatus(DeviceStatus.alert);
+        plat.publishStatus(DeviceStatus.alert);
     }
     console.error(err);
 });
@@ -194,7 +157,29 @@ function sendData(payload: any): Promise<{ sid: string; data: string; result: 'o
                 resolve(jsonPayload);
                 client.destroy();
             });
-            plat.setStatus(DeviceStatus.ready);
+            plat.publishStatus(DeviceStatus.ready);
         });
     });
 }
+
+plat.init();
+
+async function sync(responseData?: string) {
+    let data = responseData;
+    if (!data) {
+        const response = await sendData(StatusPayload);
+        data = response.data;
+    }
+
+    const json = decodeData(data);
+    bubblesProperty.setValue(json.bubbles.toString())
+    nozzlesProperty.setValue(json.nozzles.toString())
+    pumpProperty.setValue(json.pump.toString());
+    switchProperty.setValue((json.pumpState == PumpState.pumpAndHeater).toString())
+    electrolysisProperty.setValue(json.electrolysis.toString())
+    tempCurrentProperty.setValue(json.currentTemp.toString())
+    tempPresetProperty.setValue(json.presetTemp.toString())
+}
+
+sync();
+setInterval(() => sync(), 1000 * 60 * 5);

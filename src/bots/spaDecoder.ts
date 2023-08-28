@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+import { assertObjectMatch } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 export enum PumpState {
     panelOff = 'panelOff',
@@ -36,7 +36,7 @@ export function decodeData(data: string) {
     };
 }
 
-assert.deepStrictEqual(decodeData('FFFF110F01070025000000008080802500000C'), {
+assertObjectMatch(decodeData('FFFF110F01070025000000008080802500000C'), {
     bubbles: false,
     nozzles: false,
     electrolysis: false,
@@ -46,7 +46,7 @@ assert.deepStrictEqual(decodeData('FFFF110F01070025000000008080802500000C'), {
     presetTemp: 37,
 });
 
-assert.deepStrictEqual(decodeData('23002400000000808E80250000E2'), {
+assertObjectMatch(decodeData('23002400000000808E80250000E2'), {
     bubbles: false,
     nozzles: false,
     electrolysis: true,
@@ -56,7 +56,7 @@ assert.deepStrictEqual(decodeData('23002400000000808E80250000E2'), {
     presetTemp: 37,
 });
 
-assert.deepStrictEqual(decodeData('070023000000008080802500000E'), {
+assertObjectMatch(decodeData('070023000000008080802500000E'), {
     bubbles: false,
     nozzles: false,
     electrolysis: false,
@@ -66,7 +66,7 @@ assert.deepStrictEqual(decodeData('070023000000008080802500000E'), {
     presetTemp: 37,
 });
 
-assert.deepStrictEqual(decodeData('090023000000008080802500000C'), {
+assertObjectMatch(decodeData('090023000000008080802500000C'), {
     bubbles: false,
     nozzles: true,
     electrolysis: false,
@@ -78,7 +78,7 @@ assert.deepStrictEqual(decodeData('090023000000008080802500000C'), {
 
 /*
 FFFF110F01
-0 - 0 bubbles off, 1 bubbles on, 2 cleaning on 
+0 - 0 bubbles off, 1 bubbles on, 2 cleaning on
 7 - panel/pump - 0 - panel off, 1 pump off, 3  pump on, 7 pump on + heat, 9 nozzles
 00
 25 - current temp
