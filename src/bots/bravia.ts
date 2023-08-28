@@ -1,7 +1,6 @@
 import config from '../config.ts';
-import { ComponentType, PropertyDataType } from '../lib/type.ts';
 import { exec } from "https://deno.land/x/exec/mod.ts";
-import { Platform, DeviceStatus } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/connection.ts"
+import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/mod.ts"
 import Bravia from "npm:bravia@^1.3.3";
 import { assert } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
