@@ -20,8 +20,8 @@ pipeline {
             }
 
             steps {
-                // sh 'curl  -X POST -H  "X-API-Key: $TRIGGER_API_KEY" --ipv4 http://192.168.10.88:9020/trigger/IOT-bots-prod'
-                sh 'curl  -X POST -H  "X-API-Key: $TRIGGER_API_KEY" --ipv4 http://192.168.10.88:9020/trigger/IOT-bots-dev'
+                sh 'curl  -X POST -H  "X-API-Key: $TRIGGER_API_KEY" --ipv4 http://192.168.10.88:9020/trigger/IOT-bots-prod'
+                // sh 'curl  -X POST -H  "X-API-Key: $TRIGGER_API_KEY" --ipv4 http://192.168.10.88:9020/trigger/IOT-bots-dev'
             }
         }
     }
