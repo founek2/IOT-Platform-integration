@@ -58,7 +58,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         }),
     };
 
-    const plat = new Platform('BOT-9011CC', 'martas', 'Spáčko', config.mqtt.uri, config.mqtt.port);
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
 
 
     const nodeLight = plat.addNode('control', 'Vířivka', ComponentType.switch);
