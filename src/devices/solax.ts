@@ -94,7 +94,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
             });
     }
 
-    const plat = new Platform('BOT-SOLAX11', 'martas', 'Foto', config.mqtt.uri, config.mqtt.port);
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
 
     const nodeLight = plat.addNode('invertor', 'Střídač', ComponentType.sensor);
     const nodeBattery = plat.addNode('battery', 'Baterie', ComponentType.sensor);
