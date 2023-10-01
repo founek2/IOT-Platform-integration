@@ -34,7 +34,7 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
             propertyId: 'image',
             dataType: PropertyDataType.binary,
             name: name,
-            format: "'image/jpeg"
+            format: "image/jpeg"
         });
         cams[name] = property
     }
