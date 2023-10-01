@@ -21,6 +21,7 @@ type Zigbee2MqttConfig = Type<typeof Schema>;
 export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, logger) {
     let instances: Platform[] = [];
     let globalData: { devices: Device[], fingerprint: string } = { devices: [], fingerprint: "" };
+    const availabilityCache: Record<string, DeviceStatus | undefined> = {};
 
     const zigbeeClient = mqtt.connect(bridge.zigbeeMqtt.uri, {
         port: bridge.zigbeeMqtt.port,
@@ -61,6 +62,15 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
             logger.debug("Refreshing devices");
             await shutdownDevices(instances);
             instances = await spawnDevices(globalData.devices, publishSetToZigbee, { ...config, deeplApiKey: bridge.deeplApiKey }, logger);
+
+            // Backfill last known availability from cache
+            Object.entries(availabilityCache).forEach(([friendly_name, status]) => {
+                const plat = instances.find((p) => p.deviceName === friendly_name);
+                if (!plat || !status) return;
+
+                plat.publishStatus(status)
+            })
+
         });
 
         handle(`${bridge.zigbeeMqtt.prefix}/+`, function (_topic, message, [friendly_name]) {
@@ -100,11 +110,13 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
         });
 
         handle(`${bridge.zigbeeMqtt.prefix}/+/availability`, function (_topic, message, [friendly_name]) {
+            const data: { state?: "online" | "offline" } = JSON.parse(message.toString());
+
+            const status = data.state === "online" ? DeviceStatus.ready : DeviceStatus.disconnected;
+            availabilityCache[friendly_name] = status;
+
             const plat = instances.find((p) => p.deviceName === friendly_name);
             if (!plat) return;
-
-            const data: { state?: "online" | "offline" } = JSON.parse(message.toString());
-            const status = data.state === "online" ? DeviceStatus.ready : DeviceStatus.disconnected;
             plat.publishStatus(status)
         })
     })
