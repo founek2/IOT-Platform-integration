@@ -2,11 +2,17 @@ import { exec } from "https://deno.land/x/exec@0.0.5/mod.ts";
 import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/mod.ts"
 import Bravia from "npm:bravia@^1.3.3";
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, number, array } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+
+const ActionSchema = SchemaValidator({
+    name: string,
+    url: string
+})
 
 export const Schema = SchemaValidator({
     braviaIp: string,
     braviaPsk: number,
+    braviaActions: array.of(ActionSchema).optional()
 })
 
 type BraviaConfig = Type<typeof Schema>;
@@ -62,23 +68,29 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
         },
     });
 
-    nodeLight.addProperty({
-        propertyId: 'view',
-        dataType: PropertyDataType.enum,
-        format: "kamera_1,kamera_2,nic",
-        name: 'Zobrazit',
-        settable: true,
-        callback: async (newValue) => {
-            if (newValue === "kamera_1")
-                await exec(`catt --device ${device.braviaIp} cast_site "http://192.168.10.88:8888/camera_1/mjpeg-stream"`)
-            else if (newValue === "kamera_2")
-                await exec(`catt --device ${device.braviaIp} cast_site "http://192.168.10.88:8888/camera_2/mjpeg-stream"`)
-            else if (newValue === "nic")
-                await exec(`catt --device ${device.braviaIp} stop`)
+    if (device.braviaActions) {
+        nodeLight.addProperty({
+            propertyId: 'view',
+            dataType: PropertyDataType.enum,
+            format: [...device.braviaActions.map(v => v.name), "stop"].join(","),
+            name: 'Zobrazit',
+            settable: true,
+            callback: async (newValue) => {
+                const action = device.braviaActions?.find(v => v.name === newValue)
+                if (action) {
+                    await exec(`catt --device ${device.braviaIp} cast_site "${action.url}"`)
+                    return true
+                }
 
-            return true
-        },
-    });
+                if (newValue === "stop") {
+                    await exec(`catt --device ${device.braviaIp} stop`)
+                    return true
+                }
+
+                return false;
+            },
+        });
+    }
 
     plat.init();
 
