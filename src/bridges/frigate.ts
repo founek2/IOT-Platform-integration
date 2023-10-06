@@ -10,7 +10,8 @@ export const Schema = SchemaValidator({
         uri: string,
         port: number,
         prefix: string.optional("frigate")
-    }
+    },
+    frigateStreamUrl: string.optional()
 })
 
 type FrigateConfig = Type<typeof Schema>;
@@ -28,8 +29,21 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
     const cameras = frigateConfig.cameras;
 
     const plat = new Platform(bridge.id, config.userName, bridge.name, config.mqtt.uri, config.mqtt.port);
-    for (const [name, camera] of Object.entries(cameras)) {
+    for (const [name, _camera] of Object.entries(cameras)) {
         const node = plat.addNode(name, name, ComponentType.generic);
+
+        const streamName = Object.keys(frigateConfig.go2rtc?.streams || {}).find(streamName => streamName.includes(name))
+        if (bridge.frigateStreamUrl && streamName) {
+            const stream = node.addProperty({
+                propertyId: 'stream',
+                dataType: PropertyDataType.string,
+                name: name,
+                format: "video/mp4",
+                retained: true,
+            });
+            stream.setValue(`${bridge.frigateStreamUrl}?src=${streamName}`)
+        }
+
         const property = node.addProperty({
             propertyId: 'image',
             dataType: PropertyDataType.binary,
@@ -94,5 +108,8 @@ interface FrigateRemoteConfig {
     cameras: Record<string, FrigateRemoteCamera>
     objects?: {
         track?: string[]
+    }
+    go2rtc?: {
+        streams?: { [name: string]: string[] }
     }
 }
