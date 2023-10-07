@@ -16,7 +16,7 @@ cp example.yaml config.yaml
 vim config.yaml
 
 # run it
-docker run -v ./data:/app/local-storage ./config.yaml:/config.yaml docker-registry.iotdomu.cz/iot-platform/bots:latest
+docker run -v ./data:/app/local-storage ./config.yaml:/config.yaml docker-registry.iotdomu.cz/iot-platform/integration
 ```
 
 ## Bridges
