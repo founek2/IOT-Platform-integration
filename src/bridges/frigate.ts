@@ -83,7 +83,6 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
         });
         Object.keys(cameras).forEach(cam_name => {
             handle(`${bridge.frigateMqtt.prefix}/${cam_name}/(${frigateConfig.objects?.track?.join("|")})/snapshot`, async function (topic, message) {
-                console.log("sending snapshot")
                 cams[cam_name].setValue(message)
             });
         })
