@@ -1,4 +1,4 @@
-import { PropertyDataType, Node, Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/mod.ts"
+import { PropertyDataType, Node, Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import translateDeepl from "npm:translate";
 
 function translate(text: string, deeplApiKey?: string) {

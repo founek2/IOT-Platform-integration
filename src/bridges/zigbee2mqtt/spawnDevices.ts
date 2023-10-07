@@ -1,5 +1,5 @@
 import { Device, assignProperty } from "./convertor.ts";
-import { Platform, ComponentType, Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/mod.ts"
+import { Platform, ComponentType, Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 
 interface SpawnConfig {
     userName: string,

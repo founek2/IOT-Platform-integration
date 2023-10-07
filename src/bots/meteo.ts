@@ -1,5 +1,5 @@
 import config from '../config.ts';
-import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/mod.ts"
+import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 
 function generateTemp(previousTemp: number = 20) {
     const change = Math.random() / 2;
