@@ -52,4 +52,4 @@ Solax inverter             |  Solax baterry
 :-------------------------:|:-------------------------:
 <img src="./_media/screenshots/solax_dialog.png" alt="Solax inverter" width="400"/> |  <img src="./_media/screenshots/solax_baterry_dialog.png" alt="Solax inverter" width="400"/>
 
-> Integration for Solax X3 <https://www.zigbee2mqtt.io/devices/QT06_1.html>
+> Integration for Solax X3
