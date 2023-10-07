@@ -1,0 +1,55 @@
+# Connection to mqtt of IOT Platform
+userName: user
+mqtt:
+  uri: mqtt://ip_address_of_platform
+  port: 1883
+
+# Integrations
+bridges:
+  BRIDGE_1:
+    name: 'Zigbee'
+    type: zigbee2mqtt
+    # provide connection to MQTT, to which zigbee2mqtt is connected
+    zigbeeMqtt:
+      uri: mqtt://ip_address
+      port: 1883
+      prefix: zigbee2mqtt
+    # Optional to allow translation to Czech language
+    #deeplApiKey: 'API_KEY'
+  BRIDGE_2:
+    name: 'NVR'
+    type: frigate
+    # provide connection to MQTT, to which frigate is connected
+    frigateMqtt:
+      uri: mqtt://ip_Address
+      port: 1883
+      prefix: frigate
+    # Url to frigate API
+    frigateUrl: http://192.168.10.225:5000
+    # Optional: Stream URL - integration will append query `?src={camera_name}`
+    # !! This url will be available to everyone with access to the device, make sure to properly secure it
+    # frigateStreamUrl: https://kamery.home.iotdomu.cz/api/frame.mp4
+devices:
+  BOT-SPA98190:
+    name: Výřivka
+    type: intex
+    intexIp: 192.168.10.241
+    intexPort: 8990
+  BOT-TV198155:
+    name: Televize
+    type: bravia
+    braviaIp: ip_Address
+    # Password to bravia API
+    braviaPsk: 5211
+    # Optional: custom actions to render website via Chromecast
+    # braviaActions:
+    #   - name: Dashboard
+    #     url: https://example.com
+    #   - name: Kamera
+    #     url: https://example2.com
+  BOT-SOLAX155:
+    name: Střídač
+    type: solax
+    solaxApiKey:
+    solaxRegistrationNumber:
+    solaxMqttPassword:
