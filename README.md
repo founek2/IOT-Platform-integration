@@ -4,6 +4,21 @@ Repository contains bridges, integrations and bots written in Deno for [IoT Plat
 
 IoT Platform currently does not support any kinds of plugins, so integrations is done via this project - it emulates every device acting as a bridge for communication.
 
+## How to run it
+
+Define whole integration via yaml file. [example.yaml](./example.yaml) contains example configuration for all type of devices and bridges available.
+
+```bash
+# Bootstrap config
+cp example.yaml config.yaml
+
+# customize all you want
+vim config.yaml
+
+# run it
+docker run -v ./data:/app/local-storage ./config.yaml:/config.yaml docker-registry.iotdomu.cz/iot-platform/bots:latest
+```
+
 ## Bridges
 
 Exposing of all devices.
