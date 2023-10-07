@@ -3,7 +3,7 @@ import { args, EarlyExitFlag, Option } from "https://deno.land/x/args@2.1.1/inde
 import { Text } from "https://deno.land/x/args@2.1.1/value-types.ts";
 import { Config, ConfigGeneral, Module, SchemaGeneral, FactoryFn, ConfigDevice, FactoryReturn } from "./types.ts";
 import SchemaValidator, { string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
-import { Logger, logger } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/mod.ts"
+import { Logger, logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { PARSE_FAILURE } from "https://deno.land/x/args@2.1.1/symbols.ts";
 
 const modules = {} as { [key: string]: Module };

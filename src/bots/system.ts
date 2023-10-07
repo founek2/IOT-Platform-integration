@@ -1,6 +1,6 @@
 import * as si from 'npm:systeminformation';
 import config from '../config.ts';
-import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platforma-zigbee/master/src/lib/mod.ts"
+import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 
 // console.log("load", await si.cpu());
 const plat = new Platform('system-993D1', 'martas', 'Systém', config.MQTT_SERVER_URL, config.MQTT_SERVER_PORT);
