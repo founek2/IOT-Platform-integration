@@ -44,7 +44,7 @@ Exposing of all devices.
 
 > Image shows integrated single camera via Frigate
 
-<img src="./_media/screenshots/camera_dialog.png" alt="Zigbee valve" width="400"/>
+<img src="./_media/screenshots/valve_dialog.png" alt="Zigbee valve" width="400"/>
 
 > Image shows integration for Zigbee water valve <https://www.zigbee2mqtt.io/devices/QT06_1.html>
 
