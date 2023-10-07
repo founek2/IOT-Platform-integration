@@ -37,7 +37,7 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
             const stream = node.addProperty({
                 propertyId: 'stream',
                 dataType: PropertyDataType.string,
-                name: name,
+                name: "Náhled",
                 format: "video/mp4",
                 retained: true,
             });
@@ -47,7 +47,7 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
         const property = node.addProperty({
             propertyId: 'image',
             dataType: PropertyDataType.binary,
-            name: name,
+            name: "Událost",
             format: "image/jpeg"
         });
         cams[name] = property
@@ -83,6 +83,7 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
         });
         Object.keys(cameras).forEach(cam_name => {
             handle(`${bridge.frigateMqtt.prefix}/${cam_name}/(${frigateConfig.objects?.track?.join("|")})/snapshot`, async function (topic, message) {
+                console.log("sending snapshot")
                 cams[cam_name].setValue(message)
             });
         })
