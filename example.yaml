@@ -28,7 +28,9 @@ bridges:
     frigateUrl: http://192.168.10.225:5000
     # Optional: Stream URL - integration will append query `?src={camera_name}`
     # !! This url will be available to everyone with access to the device, make sure to properly secure it
+    # !! Support for webrtc (go2rtc) and mp4
     # frigateStreamUrl: https://kamery.home.iotdomu.cz/api/frame.mp4
+    # frigateStreamUrl: https://kamery.home.iotdomu.cz/live/webrtc/stream.html
 devices:
   BOT-SPA98190:
     name: Výřivka

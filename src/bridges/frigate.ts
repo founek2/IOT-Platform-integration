@@ -38,7 +38,7 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
                 propertyId: 'stream',
                 dataType: PropertyDataType.string,
                 name: "Náhled",
-                format: "video/mp4",
+                format: bridge.frigateStreamUrl.includes("webrtc") ? "webrtc" : "video/mp4",
                 retained: true,
             });
             stream.setValue(`${bridge.frigateStreamUrl}?src=${streamName}`)
