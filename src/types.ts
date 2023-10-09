@@ -31,8 +31,14 @@ export interface Config extends Omit<ConfigGeneral, "bridges" | "devices"> {
     devices?: Record<string, ConfigDevice>
 }
 
+export interface HealthCheck {
+    deviceId: string,
+    status?: string,
+    connected: boolean,
+}
 export type FactoryReturn = {
     cleanUp: () => void | Promise<void>
+    healthCheck: () => HealthCheck | HealthCheck[]
 };
 export type FactoryFn<T = Record<string | number, string | number>> = (config: DeviceConfig, device: Device<Device<T>>, log: Logger) => FactoryReturn | Promise<FactoryReturn>;
 export interface Module {

@@ -188,6 +188,12 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         cleanUp: function () {
             clearInterval(syncInterval)
             plat.disconnect()
+        },
+        healthCheck: function () {
+            return {
+                deviceId: plat.deviceId,
+                connected: plat.client.connected
+            }
         }
     };
 }
