@@ -140,6 +140,12 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
         cleanUp: async function () {
             await shutdownDevices(instances)
             await zigbeeClient.endAsync()
+        },
+        healthCheck: function () {
+            return instances.map((plat) => ({
+                deviceId: plat.deviceId,
+                connected: plat.client.connected
+            }))
         }
     }
 }

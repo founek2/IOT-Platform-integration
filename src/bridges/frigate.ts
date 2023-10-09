@@ -91,6 +91,12 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
     return {
         cleanUp: async function () {
             await plat.disconnect()
+        },
+        healthCheck: function () {
+            return {
+                deviceId: plat.deviceId,
+                connected: plat.client.connected
+            }
         }
     }
 }

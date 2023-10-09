@@ -1,10 +1,10 @@
 import { parse } from "https://deno.land/std@0.202.0/yaml/mod.ts";
 import { args, EarlyExitFlag, Option } from "https://deno.land/x/args@2.1.1/index.ts"
 import { Text } from "https://deno.land/x/args@2.1.1/value-types.ts";
-import { Config, ConfigGeneral, Module, SchemaGeneral, FactoryFn, ConfigDevice, FactoryReturn } from "./types.ts";
+import { Config, Module, SchemaGeneral, ConfigDevice, FactoryReturn } from "./types.ts";
 import SchemaValidator, { string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { Logger, logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
-import { PARSE_FAILURE } from "https://deno.land/x/args@2.1.1/symbols.ts";
+import { startHealthcheckServer } from "./server.ts";
 
 const modules = {} as { [key: string]: Module };
 for await (const dirEntry of Deno.readDir("src/devices")) {
@@ -136,3 +136,5 @@ async function shutdown() {
 Deno.addSignalListener("SIGINT", shutdown);
 Deno.addSignalListener("SIGTERM", shutdown);
 Deno.addSignalListener("SIGQUIT", shutdown);
+
+startHealthcheckServer([...bridges, ...devices])
