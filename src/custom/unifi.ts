@@ -5,8 +5,8 @@ import { UnifiClient } from './unifi/unifiClient.ts';
 
 const SchemaWebhook = SchemaValidator({
     url: string,
-    method: string.optional("POST"),
-    headers: object.optional(),
+    method: string.optional(),
+    headers: object.optional({}),
 })
 type WebhookConfig = Type<typeof SchemaWebhook>;
 
@@ -59,8 +59,12 @@ export const factory: FactoryFn<WatcherConfig> = function (_config, device, logg
     const interval = setInterval(runSync, MINUTES_30)
 
     return {
-        cleanUp: function () {
+        cleanUp: async function () {
             clearInterval(interval)
+
+            for (const { webhooksDown } of device.unifiWatcher) {
+                await callAllWebhooks(webhooksDown, logger)
+            }
         },
         healthCheck: function () {
             return {
@@ -74,8 +78,10 @@ export const factory: FactoryFn<WatcherConfig> = function (_config, device, logg
 async function callAllWebhooks(webhooks: WebhookConfig[], logger: Logger) {
     for (const { url, method, headers } of webhooks) {
         const result = await fetch(url, {
-            method,
-            headers: headers as any
+            method: method || "POST",
+            headers: {
+                ...headers
+            }
         })
 
         if (!result.ok)
