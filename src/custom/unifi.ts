@@ -8,8 +8,11 @@ const SchemaWebhook = SchemaValidator({
     method: string.optional("POST"),
     headers: object.optional(),
 })
+type WebhookConfig = Type<typeof SchemaWebhook>;
+
 const SchemaAction = SchemaValidator({
-    webhooks: array.of(SchemaWebhook),
+    webhooksUp: array.of(SchemaWebhook),
+    webhooksDown: array.of(SchemaWebhook),
     hosts: array.of(string),
     lastSeen: string.optional("2d")
 })
@@ -36,18 +39,18 @@ export const factory: FactoryFn<WatcherConfig> = function (_config, device, logg
         await client.login()
         const activeDevices = await client.listActiveDevices()
 
-        for (const { hosts, webhooks } of device.unifiWatcher) {
+        for (const { hosts, webhooksUp, webhooksDown } of device.unifiWatcher) {
 
             const isOnline = activeDevices.some(d => hosts.includes(d.ip))
             const cacheKey = hosts.join();
             if (isOnline && !cache[cacheKey]) {
                 cache[cacheKey] = isOnline
 
-                callAllWebhooks(webhooks, "true", logger)
+                callAllWebhooks(webhooksUp, logger)
             } else if (!isOnline && cache[cacheKey]) {
                 cache[cacheKey] = isOnline
 
-                callAllWebhooks(webhooks, "false", logger)
+                callAllWebhooks(webhooksDown, logger)
             }
         }
     }
@@ -68,9 +71,9 @@ export const factory: FactoryFn<WatcherConfig> = function (_config, device, logg
     }
 }
 
-async function callAllWebhooks(webhooks: ActionConfig["webhooks"], value: string, logger: Logger) {
+async function callAllWebhooks(webhooks: WebhookConfig[], logger: Logger) {
     for (const { url, method, headers } of webhooks) {
-        const result = await fetch(`${url}${value}`, {
+        const result = await fetch(url, {
             method,
             headers: headers as any
         })

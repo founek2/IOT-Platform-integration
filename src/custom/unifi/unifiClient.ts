@@ -1,5 +1,4 @@
 import {
-    Cookie,
     CookieJar,
     wrapFetch,
 } from "https://deno.land/x/another_cookiejar@v5.0.3/mod.ts";
