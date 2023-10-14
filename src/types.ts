@@ -1,14 +1,23 @@
 import { Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import SchemaValidator, { Type, string, number, unknown } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 
+export enum ModuleType {
+    devices = "devices",
+    bridges = "bridges",
+    bots = "bots",
+    custom = "custom",
+}
+
 export const SchemaGeneral = SchemaValidator({
     userName: string,
     mqtt: {
         uri: string,
         port: number.optional(1883),
     },
-    bridges: unknown.object().optional(),
-    devices: unknown.object().optional()
+    [ModuleType.bridges]: unknown.object().optional(),
+    [ModuleType.devices]: unknown.object().optional(),
+    [ModuleType.bots]: unknown.object().optional(),
+    [ModuleType.custom]: unknown.object().optional(),
 })
 
 export interface mqttConfig {
@@ -29,6 +38,7 @@ export type ConfigDevice = DeviceBase & { [key: string]: any };
 export interface Config extends Omit<ConfigGeneral, "bridges" | "devices"> {
     bridges?: Record<string, ConfigDevice>
     devices?: Record<string, ConfigDevice>
+    custom?: Record<string, ConfigDevice>
 }
 
 export interface HealthCheck {
