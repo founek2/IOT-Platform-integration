@@ -3,6 +3,7 @@ import { Platform, ComponentType, PropertyDataType, PropertyClass, DeviceStatus 
 import { Socket } from 'node:net';
 import { decodeData, PumpState } from './intex/spaDecoder.ts';
 import { FactoryFn } from '../types.ts';
+import { Buffer } from 'https://deno.land/std@0.197.0/streams/buffer.ts';
 
 export const Schema = SchemaValidator({
     intexIp: string,
@@ -153,11 +154,14 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
             client.connect(device.intexPort, device.intexIp, function () {
                 client.write(JSON.stringify(payload));
 
-                client.on('data', (message) => {
+                function cb(message: Buffer) {
                     const jsonPayload = JSON.parse(message.toString());
                     resolve(jsonPayload);
                     client.destroy();
-                });
+                    // remote itself to fix memory leak
+                    client.removeListener("data", cb)
+                }
+                client.on('data', cb);
                 plat.publishStatus(DeviceStatus.ready);
             });
         });
