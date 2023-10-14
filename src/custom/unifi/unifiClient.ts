@@ -31,8 +31,6 @@ export class UnifiClient {
                 password: this.password
             })
         })
-        // console.log(res.status, this.user, this.password)
-        // console.log(await res.headers)
         if (!res.ok) throw new Error("Failed to login")
     }
 
