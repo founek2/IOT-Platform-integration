@@ -1,45 +1,59 @@
 import * as si from 'npm:systeminformation';
-import config from '../config.ts';
 import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { FactoryFn } from '../types.ts';
 
-// console.log("load", await si.cpu());
-const plat = new Platform('system-993D1', 'martas', 'Systém', config.MQTT_SERVER_URL, config.MQTT_SERVER_PORT);
-const nodeLight = plat.addNode('load', 'Systém', ComponentType.sensor);
+export const factory: FactoryFn = function (config, device, _logger) {
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
 
-const loadProperty = nodeLight.addProperty({
-    propertyId: 'load',
-    dataType: PropertyDataType.float,
-    unitOfMeasurement: '%',
-    propertyClass: PropertyClass.Pressure,
-    name: 'Zátěž',
-});
-const memoryProperty = nodeLight.addProperty({
-    propertyId: 'memory',
-    dataType: PropertyDataType.float,
-    unitOfMeasurement: '%',
-    name: 'Paměť',
-});
-const cpuProperty = nodeLight.addProperty({
-    propertyId: 'cpu',
-    dataType: PropertyDataType.float,
-    unitOfMeasurement: 'GHz',
-    name: 'CPU',
-});
+    const nodeLight = plat.addNode('load', 'Systém', ComponentType.sensor);
 
-plat.init();
+    const loadProperty = nodeLight.addProperty({
+        propertyId: 'load',
+        dataType: PropertyDataType.float,
+        unitOfMeasurement: '%',
+        propertyClass: PropertyClass.Pressure,
+        name: 'Zátěž',
+    });
+    const memoryProperty = nodeLight.addProperty({
+        propertyId: 'memory',
+        dataType: PropertyDataType.float,
+        unitOfMeasurement: 'GiB',
+        name: 'Paměť',
+    });
+    const cpuProperty = nodeLight.addProperty({
+        propertyId: 'cpu',
+        dataType: PropertyDataType.float,
+        unitOfMeasurement: 'GHz',
+        name: 'CPU',
+    });
 
-async function sendData() {
-    const cpu = await si.cpu();
-    const memory = await si.mem();
-    const data6 = await si.currentLoad();
+    plat.init();
 
-    memoryProperty.setValue((memory.active / memory.total).toString().slice(0, 4))
-    loadProperty.setValue(Math.floor(data6.cpus[0].load).toString())
-    cpuProperty.setValue(cpu.speed.toString())
-}
-setInterval(() => {
+    async function sendData() {
+        const cpu = await si.cpu();
+        const memory = await si.mem();
+        const load = await si.currentLoad();
+
+        memoryProperty.setValue((memory.active * 1e-9).toString().slice(0, 4))
+        loadProperty.setValue(load.avgLoad.toString().slice(0, 4))
+        cpuProperty.setValue(cpu.speed.toString())
+    }
+
+    const syncInterval = setInterval(() => {
+        sendData();
+    }, 60 * 1000);
     sendData();
-}, 60 * 1000);
 
-sendData();
-
+    return {
+        cleanUp: function () {
+            clearInterval(syncInterval)
+            plat.disconnect()
+        },
+        healthCheck: function () {
+            return {
+                deviceId: plat.deviceId,
+                connected: plat.client.connected
+            }
+        }
+    }
+}
