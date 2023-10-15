@@ -74,7 +74,7 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
         });
 
         handle(`${bridge.zigbeeMqtt.prefix}/+`, function (_topic, message, [friendly_name]) {
-            const plat = instances.find((p) => p.deviceName === friendly_name);
+            const plat = instances.find((p) => p.deviceName === friendly_name || p.deviceId === friendly_name);
             if (!plat) return;
 
             const data: { [key: string]: string | number | boolean } = JSON.parse(message.toString());
