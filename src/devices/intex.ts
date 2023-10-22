@@ -1,7 +1,7 @@
 import SchemaValidator, { Type, string, number } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { Platform, ComponentType, PropertyDataType, PropertyClass, DeviceStatus } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { Socket } from 'node:net';
-import { decodeData, PumpState } from './intex/spaDecoder.ts';
+import { decodeData, prepareCommand, commands } from './intex/spaDecoder.ts';
 import { FactoryFn } from '../types.ts';
 import { Buffer } from 'https://deno.land/std@0.197.0/streams/buffer.ts';
 
@@ -12,52 +12,9 @@ export const Schema = SchemaValidator({
 
 type IntexConfig = Type<typeof Schema>;
 
+
 export const factory: FactoryFn<IntexConfig> = function (config, device, logger) {
     const client = new Socket();
-
-    const Bubbles = {
-        on: {
-            type: 1,
-            sid: '1616871584000',
-            data: '8888060F010400D4',
-        },
-        off: {
-            type: 1,
-            sid: '1616871589000',
-            data: '8888060F010400D4',
-        },
-    };
-
-    // const Power = {
-    //     on: { data: '8888060F01400098', sid: '1631357332538', type: 1 },
-    //     off: { data: '8888060F01400098', sid: '1631357332538', type: 1 },
-    // };
-
-    const Filtration = {
-        on: { data: '8888060F010004D4', sid: '1626776247245', type: 1 },
-        off: { data: '8888060F010004D4', sid: '1626776247245', type: 1 },
-    };
-
-    const FiltrationAndHeater = {
-        on: { data: '8888060F010010C8', sid: '1631356889267', type: 1 },
-        off: { data: '8888060F010010C8', sid: '1631356889267', type: 1 },
-    };
-
-    // current temp OUTPUT[45:47], presetTemp OUTPUT[61:63]
-    const StatusPayload = { data: '8888060FEE0F01DA', sid: '1630705186378', type: 1 };
-
-    const Nozzles = {
-        on: JSON.stringify({
-            type: 1,
-            sid: '1631356889267',
-            data: '8888060F011000C8',
-        }),
-        off: JSON.stringify({
-            type: 1,
-            sid: '1631356889267',
-            data: '8888060F011000C8',
-        }),
-    };
 
     const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
 
@@ -70,7 +27,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Ohřev',
         settable: true,
         callback: async function (prop) {
-            const response = await sendData(FiltrationAndHeater.off);
+            const response = await sendData(commands.heater);
             sync(response.data);
         },
     });
@@ -80,7 +37,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Bubliny',
         settable: true,
         callback: async function (prop) {
-            const response = await sendData(Bubbles.on);
+            const response = await sendData(commands.bubbles);
             sync(response.data);
         },
     });
@@ -91,7 +48,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Trysky',
         settable: true,
         callback: async function (prop) {
-            const response = await sendData(Nozzles.on);
+            const response = await sendData(commands.jets);
             sync(response.data);
         },
     });
@@ -102,20 +59,20 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Filtrace',
         settable: true,
         callback: async function (prop) {
-            const response = await sendData(Filtration.on);
+            const response = await sendData(commands.filter);
             sync(response.data);
         },
     });
 
     const electrolysisProperty = nodeLight.addProperty({
-        propertyId: 'electrolysis',
+        propertyId: 'sanitizer',
         dataType: PropertyDataType.boolean,
         name: 'Elektrolýza',
-        // settable: true,
-        // callback: function (prop) {
-        // if (prop.value === 'true') sendData(Alimentation.on);
-        // else sendData(Alimentation.off);
-        // },
+        settable: true,
+        callback: function (value) {
+            if (value === 'true') sendData(commands.sanitizer);
+            else sendData(commands.sanitizer);
+        },
     });
 
     const nodeSwitch = plat.addNode('sensor', 'Teplota', ComponentType.sensor);
@@ -149,17 +106,22 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
     });
     // client.setKeepAlive(true, 5000);
 
-    function sendData(payload: any): Promise<{ sid: string; data: string; result: 'ok'; type: number }> {
+    function sendData(payload: { type: number, data: string, sid?: string }): Promise<{ sid: string; data: string; result: 'ok'; type: number }> {
         return new Promise((resolve) => {
             client.connect(device.intexPort, device.intexIp, function () {
-                client.write(JSON.stringify(payload));
+                // Add timestamp
+                const command = prepareCommand(payload)
+
+                client.write(command);
 
                 function cb(message: Buffer) {
                     const jsonPayload = JSON.parse(message.toString());
-                    resolve(jsonPayload);
+
                     client.destroy();
                     // remote itself to fix memory leak
                     client.removeListener("data", cb)
+
+                    resolve(jsonPayload);
                 }
                 client.on('data', cb);
                 plat.publishStatus(DeviceStatus.ready);
@@ -171,17 +133,17 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
     async function sync(responseData?: string) {
         let data = responseData;
         if (!data) {
-            const response = await sendData(StatusPayload);
+            const response = await sendData(commands.status);
             data = response.data;
         }
 
         const json = decodeData(data);
         bubblesProperty.setValue(json.bubbles.toString())
-        nozzlesProperty.setValue(json.nozzles.toString())
-        pumpProperty.setValue(json.pump.toString());
-        switchProperty.setValue((json.pumpState == PumpState.pumpAndHeater).toString())
-        electrolysisProperty.setValue(json.electrolysis.toString())
-        tempCurrentProperty.setValue(json.currentTemp.toString())
+        nozzlesProperty.setValue(json.jets.toString())
+        pumpProperty.setValue(json.filter.toString());
+        switchProperty.setValue((json.filter && json.heater).toString())
+        electrolysisProperty.setValue(json.sanitizer.toString())
+        if (json.currentTemp) tempCurrentProperty.setValue(json.currentTemp.toString())
         tempPresetProperty.setValue(json.presetTemp.toString())
     }
 

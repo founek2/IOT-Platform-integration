@@ -1,80 +1,176 @@
-import { assertObjectMatch } from "https://deno.land/std@0.200.0/assert/mod.ts";
+// Logic from https://github.com/mathieu-mp/intex-spa/tree/main
 
-export enum PumpState {
-    panelOff = 'panelOff',
-    pumpOff = 'pumpOff',
-    pumpOn = 'pumpOn',
-    pumpAndHeater = 'pumpAndHeater',
-    nozzles = 'nozzles',
+import { assertObjectMatch } from "https://deno.land/std@0.200.0/assert/mod.ts";
+import { checksum_as_str } from "./checksum.ts";
+import { assert } from "node:console";
+
+
+export const commands = {
+    status: {
+        data: "8888060FEE0F01",
+        type: 1
+    },
+    power: {
+        data: "8888060F014000",
+        type: 1
+    },
+    filter: {
+        data: "8888060F010004",
+        type: 1
+    },
+    heater: {
+        data: "8888060F010010",
+        type: 1
+    },
+    jets: {
+        data: "8888060F011000",
+        type: 1
+    },
+    bubbles: {
+        data: "8888060F010400",
+        type: 1
+    },
+    sanitizer: {
+        data: "8888060F010001",
+        type: 1
+    },
+    presetTemp: {
+        data: "8888050F0C",
+        type: 1
+    },
+    // "info": {
+    //     data: "",
+    //     type: info
+    // },
 }
 
-export const pumpStateToEnum = {
-    '0': PumpState.panelOff,
-    '1': PumpState.pumpOff,
-    '3': PumpState.pumpOn,
-    '7': PumpState.pumpAndHeater,
-    '9': PumpState.nozzles,
-};
+function power(data: bigint) {
+    return Boolean((data >> 104n) & 0b1n)
+}
+function filter(data: bigint) {
+    return Boolean((data >> 105n) & 0b1n)
+}
+function heater(data: bigint) {
+    return Boolean((data >> 106n) & 0b1n)
+}
+function jets(data: bigint) {
+    return Boolean((data >> 107n) & 0b1n)
+}
+function bubbles(data: bigint) {
+    return Boolean((data >> 108n) & 0b1n)
+}
+function sanitizer(data: bigint) {
+    return Boolean((data >> 109n) & 0b1n)
+}
 
-export function decodeData(data: string) {
-    const withoutPrefix = data.replace('FFFF110F01', '');
-    const bubbles = withoutPrefix.substring(0, 1) as '0' | '1' | '2';
-    const pump = withoutPrefix.substring(1, 2) as '0' | '1' | '3' | '7' | '9';
+/** Current temperature of the water, expressed in `unit` */
+function current_temp(data: bigint) {
+    const raw_current_temp = (data >> 88n) & 0xFFn
 
-    const currentTemp = withoutPrefix.substring(4, 6);
-    const presetTemp = withoutPrefix.substring(6 + '00000000808080'.length, 6 + '00000000808080'.length + 2);
-    const pumpState = pumpStateToEnum[pump];
+    // If current_temp encodes a temperature, return the temperature
+    if (raw_current_temp < 181) {
+        return Number(raw_current_temp)
+    }
+    // Else if current_temp encodes an error (E81, ...), return False
+    else
+        return undefined
+}
+
+/** Current error code of the spa */
+function error_code(data: bigint) {
+    const raw_current_temp = (data >> 88n) & 0xFFn
+
+    // If current_temp encodes an error (E81, ...), return the error code
+    if (raw_current_temp >= 181) {
+        const error_no = raw_current_temp - 100n
+        return `E{error_no}`
+    }
+    // Else if current_temp encodes a temperature, return False
+    else
+        return undefined
+}
+
+function preset_temp(data: bigint) {
+    return Number((data >> 24n) & 0xFFn)
+}
+
+
+export function decodeData(rawData: string) {
+    const checksum_calculated = checksum_as_str(rawData.slice(0, -2))
+    const checksum_in_response = rawData.slice(-2)
+
+    assert(checksum_calculated == checksum_in_response, `checksum missmatch ${checksum_calculated} != ${checksum_in_response}`)
+
+    const data = BigInt(`0x${rawData}`)
+    // const withoutPrefix = data.replace('FFFF110F01', '');
+    // const bubbles = withoutPrefix.substring(0, 1) as '0' | '1' | '2';
+    // const pump = withoutPrefix.substring(1, 2) as '0' | '1' | '3' | '7' | '9';
+
+    // const currentTemp = withoutPrefix.substring(4, 6);
+    // const presetTemp = withoutPrefix.substring(6 + '00000000808080'.length, 6 + '00000000808080'.length + 2);
+    // const pumpState = pumpStateToEnum[pump];
 
     return {
-        bubbles: bubbles == '1',
-        pumpState: pumpState,
-        pump: pumpState == PumpState.pumpOn || pumpState == PumpState.pumpAndHeater,
-        nozzles: pumpState == PumpState.nozzles,
-        electrolysis: bubbles == '2',
-        currentTemp: parseInt(currentTemp, 16),
-        presetTemp: parseInt(presetTemp, 16),
+        power: power(data),
+        filter: filter(data),
+        heater: heater(data),
+        jets: jets(data),
+        bubbles: bubbles(data),
+        sanitizer: sanitizer(data),
+        currentTemp: current_temp(data),
+        presetTemp: preset_temp(data),
+        errorCode: error_code(data),
+
+        // bubbles: bubbles == '1',
+        // pumpState: pumpState,
+        // pump: pumpState == PumpState.pumpOn || pumpState == PumpState.pumpAndHeater,
+        // nozzles: pumpState == PumpState.nozzles,
+        // electrolysis: bubbles == '2',
+        // currentTemp: parseInt(currentTemp, 16),
+        // presetTemp: parseInt(presetTemp, 16),
     };
 }
 
+export function prepareCommand(payload: { type: number, data: string, sid?: string }): string {
+    if (!payload.sid) payload.sid = Date.now().toString();
+    payload.data = payload.data + checksum_as_str(payload.data)
+
+    return JSON.stringify(payload)
+}
+
+assertObjectMatch(decodeData('FFFF110F010700220000000080808022000012'), {
+    power: true,
+    filter: true,
+    heater: true,
+    jets: false,
+    bubbles: false,
+    sanitizer: false,
+    currentTemp: 34,
+    presetTemp: 34,
+    errorCode: undefined,
+});
 assertObjectMatch(decodeData('FFFF110F01070025000000008080802500000C'), {
     bubbles: false,
-    nozzles: false,
-    electrolysis: false,
-    pump: true,
-    pumpState: PumpState.pumpAndHeater,
+    jets: false,
+    sanitizer: false,
+    filter: true,
+    heater: true,
     currentTemp: 37,
     presetTemp: 37,
 });
 
 assertObjectMatch(decodeData('23002400000000808E80250000E2'), {
     bubbles: false,
-    nozzles: false,
-    electrolysis: true,
-    pump: true,
-    pumpState: PumpState.pumpOn,
+    jets: false,
+    sanitizer: true,
+    filter: true,
     currentTemp: 36,
     presetTemp: 37,
 });
 
-assertObjectMatch(decodeData('070023000000008080802500000E'), {
-    bubbles: false,
-    nozzles: false,
-    electrolysis: false,
-    pump: true,
-    pumpState: PumpState.pumpAndHeater,
-    currentTemp: 35,
-    presetTemp: 37,
-});
+const cmd = prepareCommand({ ...commands.status, sid: "12345678901234" })
+console.log("expected", cmd)
 
-assertObjectMatch(decodeData('090023000000008080802500000C'), {
-    bubbles: false,
-    nozzles: true,
-    electrolysis: false,
-    pump: false,
-    pumpState: PumpState.nozzles,
-    currentTemp: 35,
-    presetTemp: 37,
-});
 
 /*
 FFFF110F01
