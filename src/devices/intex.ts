@@ -26,9 +26,10 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         dataType: PropertyDataType.boolean,
         name: 'Ohřev',
         settable: true,
-        callback: async function (prop) {
-            const response = await sendData(commands.heater);
-            sync(response.data);
+        callback: function () {
+            sendAndSync(commands.heater);
+
+            return false;
         },
     });
     const bubblesProperty = nodeLight.addProperty({
@@ -36,9 +37,10 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         dataType: PropertyDataType.boolean,
         name: 'Bubliny',
         settable: true,
-        callback: async function (prop) {
-            const response = await sendData(commands.bubbles);
-            sync(response.data);
+        callback: function () {
+            sendAndSync(commands.bubbles);
+
+            return false;
         },
     });
 
@@ -47,9 +49,10 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         dataType: PropertyDataType.boolean,
         name: 'Trysky',
         settable: true,
-        callback: async function (prop) {
-            const response = await sendData(commands.jets);
-            sync(response.data);
+        callback: function () {
+            sendAndSync(commands.jets);
+
+            return false;
         },
     });
 
@@ -58,9 +61,10 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         dataType: PropertyDataType.boolean,
         name: 'Filtrace',
         settable: true,
-        callback: async function (prop) {
-            const response = await sendData(commands.filter);
-            sync(response.data);
+        callback: function () {
+            sendAndSync(commands.filter);
+
+            return false;
         },
     });
 
@@ -69,9 +73,10 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         dataType: PropertyDataType.boolean,
         name: 'Elektrolýza',
         settable: true,
-        callback: function (value) {
-            if (value === 'true') sendData(commands.sanitizer);
-            else sendData(commands.sanitizer);
+        callback: function () {
+            sendAndSync(commands.sanitizer);
+
+            return false;
         },
     });
 
@@ -92,8 +97,9 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         unitOfMeasurement: '°C',
         settable: true,
         callback: function (value) {
-            if (value === 'true') sendData(commands.presetTemp(parseInt(value)));
-            else sendData(commands.presetTemp(parseInt(value)));
+            sendAndSync(commands.presetTemp(parseInt(value)));
+
+            return false;
         },
     });
 
@@ -111,7 +117,8 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
     });
     // client.setKeepAlive(true, 5000);
 
-    function sendData(payload: { type: number, data: string, sid?: string }): Promise<{ sid: string; data: string; result: 'ok'; type: number }> {
+    type DataPayload = { type: number, data: string, sid?: string };
+    function sendData(payload: DataPayload): Promise<{ sid: string; data: string; result: 'ok'; type: number }> {
         return new Promise((resolve) => {
             client.connect(device.intexPort, device.intexIp, function () {
                 // Add timestamp
@@ -134,7 +141,6 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         });
     }
 
-    plat.init();
     async function sync(responseData?: string) {
         let data = responseData;
         if (!data) {
@@ -152,6 +158,12 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         tempPresetProperty.setValue(json.presetTemp.toString())
     }
 
+    async function sendAndSync(payload: DataPayload) {
+        const response = await sendData(payload)
+        sync(response.data)
+    }
+
+    plat.init();
     sync();
     const syncInterval = setInterval(() => sync(), 1000 * 60 * 5);
 
