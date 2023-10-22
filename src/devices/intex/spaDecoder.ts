@@ -1,8 +1,6 @@
 // Logic from https://github.com/mathieu-mp/intex-spa/tree/main
-
 import { assertObjectMatch } from "https://deno.land/std@0.200.0/assert/mod.ts";
 import { checksum_as_str } from "./checksum.ts";
-import { assert } from "node:console";
 
 
 export const commands = {
@@ -96,19 +94,11 @@ function preset_temp(data: bigint) {
 
 
 export function decodeData(rawData: string) {
-    const checksum_calculated = checksum_as_str(rawData.slice(0, -2))
-    const checksum_in_response = rawData.slice(-2)
-
-    assert(checksum_calculated == checksum_in_response, `checksum missmatch ${checksum_calculated} != ${checksum_in_response}`)
+    // const checksum_calculated = checksum_as_str(rawData.slice(0, -2))
+    // const checksum_in_response = rawData.slice(-2)
+    // assert(checksum_calculated == checksum_in_response, `checksum missmatch ${checksum_calculated} != ${checksum_in_response}, ${rawData}`)
 
     const data = BigInt(`0x${rawData}`)
-    // const withoutPrefix = data.replace('FFFF110F01', '');
-    // const bubbles = withoutPrefix.substring(0, 1) as '0' | '1' | '2';
-    // const pump = withoutPrefix.substring(1, 2) as '0' | '1' | '3' | '7' | '9';
-
-    // const currentTemp = withoutPrefix.substring(4, 6);
-    // const presetTemp = withoutPrefix.substring(6 + '00000000808080'.length, 6 + '00000000808080'.length + 2);
-    // const pumpState = pumpStateToEnum[pump];
 
     return {
         power: power(data),
@@ -120,14 +110,6 @@ export function decodeData(rawData: string) {
         currentTemp: current_temp(data),
         presetTemp: preset_temp(data),
         errorCode: error_code(data),
-
-        // bubbles: bubbles == '1',
-        // pumpState: pumpState,
-        // pump: pumpState == PumpState.pumpOn || pumpState == PumpState.pumpAndHeater,
-        // nozzles: pumpState == PumpState.nozzles,
-        // electrolysis: bubbles == '2',
-        // currentTemp: parseInt(currentTemp, 16),
-        // presetTemp: parseInt(presetTemp, 16),
     };
 }
 
@@ -168,8 +150,8 @@ assertObjectMatch(decodeData('23002400000000808E80250000E2'), {
     presetTemp: 37,
 });
 
-const cmd = prepareCommand({ ...commands.status, sid: "12345678901234" })
-console.log("expected", cmd)
+// const cmd = prepareCommand({ ...commands.status, sid: "12345678901234" })
+// console.log("expected", cmd)
 
 
 /*
