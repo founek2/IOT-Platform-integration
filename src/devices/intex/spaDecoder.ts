@@ -34,10 +34,10 @@ export const commands = {
         data: "8888060F010001",
         type: 1
     },
-    presetTemp: {
-        data: "8888050F0C",
+    presetTemp: (temp: number) => ({
+        data: "8888050F0C" + temp.toString(16).toUpperCase(),
         type: 1
-    },
+    }),
     // "info": {
     //     data: "",
     //     type: info
