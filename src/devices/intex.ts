@@ -80,7 +80,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         },
     });
 
-    const nodeSwitch = plat.addNode('sensor', 'Teplota', ComponentType.sensor);
+    const nodeSwitch = plat.addNode('sensor', 'Výřivka teplota', ComponentType.sensor);
     const tempCurrentProperty = nodeSwitch.addProperty({
         propertyId: 'tempCurrent',
         dataType: PropertyDataType.float,
@@ -97,7 +97,11 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         unitOfMeasurement: '°C',
         settable: true,
         callback: function (value) {
-            sendAndSync(commands.presetTemp(parseInt(value)));
+            const temperature = parseInt(value)
+            if (!Number.isFinite(temperature) || !Number.isInteger(temperature)) return false;
+            if (temperature < 0 || temperature > 40) return false;
+
+            sendAndSync(commands.presetTemp(temperature));
 
             return false;
         },
