@@ -90,6 +90,11 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Cíl',
         propertyClass: PropertyClass.Temperature,
         unitOfMeasurement: '°C',
+        settable: true,
+        callback: function (value) {
+            if (value === 'true') sendData(commands.presetTemp(parseInt(value)));
+            else sendData(commands.presetTemp(parseInt(value)));
+        },
     });
 
 
