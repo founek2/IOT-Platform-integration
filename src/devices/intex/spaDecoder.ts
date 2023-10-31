@@ -81,7 +81,7 @@ function error_code(data: bigint) {
     // If current_temp encodes an error (E81, ...), return the error code
     if (raw_current_temp >= 181) {
         const error_no = raw_current_temp - 100n
-        return `E{error_no}`
+        return `E${error_no}`
     }
     // Else if current_temp encodes a temperature, return False
     else
