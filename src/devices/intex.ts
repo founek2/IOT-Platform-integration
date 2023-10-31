@@ -160,6 +160,8 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         electrolysisProperty.setValue(json.sanitizer.toString())
         if (json.currentTemp) tempCurrentProperty.setValue(json.currentTemp.toString())
         tempPresetProperty.setValue(json.presetTemp.toString())
+        if (json.errorCode)
+            plat.publishStatus(DeviceStatus.alert)
     }
 
     async function sendAndSync(payload: DataPayload) {
