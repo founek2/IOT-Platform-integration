@@ -27,7 +27,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Ohřev',
         settable: true,
         callback: function () {
-            sendAndSync(commands.heater);
+            sendData(commands.heater);
 
             return false;
         },
@@ -38,7 +38,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Bubliny',
         settable: true,
         callback: function () {
-            sendAndSync(commands.bubbles);
+            sendData(commands.bubbles);
 
             return false;
         },
@@ -50,7 +50,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Trysky',
         settable: true,
         callback: function () {
-            sendAndSync(commands.jets);
+            sendData(commands.jets);
 
             return false;
         },
@@ -62,7 +62,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Filtrace',
         settable: true,
         callback: function () {
-            sendAndSync(commands.filter);
+            sendData(commands.filter);
 
             return false;
         },
@@ -74,7 +74,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         name: 'Elektrolýza',
         settable: true,
         callback: function () {
-            sendAndSync(commands.sanitizer);
+            sendData(commands.sanitizer);
 
             return false;
         },
@@ -101,7 +101,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
             if (!Number.isFinite(temperature) || !Number.isInteger(temperature)) return false;
             if (temperature < 0 || temperature > 40) return false;
 
-            sendAndSync(commands.presetTemp(temperature));
+            sendData(commands.presetTemp(temperature));
 
             return false;
         },
@@ -118,41 +118,14 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
             plat.publishStatus(DeviceStatus.disconnected);
         } else
             logger.error(err);
+
+        client.destroy();
     });
-    // client.setKeepAlive(true, 5000);
 
-    type DataPayload = { type: number, data: string, sid?: string };
-    function sendData(payload: DataPayload): Promise<{ sid: string; data: string; result: 'ok'; type: number }> {
-        return new Promise((resolve) => {
-            client.connect(device.intexPort, device.intexIp, function () {
-                // Add timestamp
-                const command = prepareCommand(payload)
+    client.on('data', (message: Buffer) => {
+        const jsonPayload = JSON.parse(message.toString());
 
-                client.write(command);
-
-                function cb(message: Buffer) {
-                    const jsonPayload = JSON.parse(message.toString());
-
-                    client.destroy();
-                    // remote itself to fix memory leak
-                    client.removeListener("data", cb)
-
-                    resolve(jsonPayload);
-                }
-                client.on('data', cb);
-                plat.publishStatus(DeviceStatus.ready);
-            });
-        });
-    }
-
-    async function sync(responseData?: string) {
-        let data = responseData;
-        if (!data) {
-            const response = await sendData(commands.status);
-            data = response.data;
-        }
-
-        const json = decodeData(data);
+        const json = decodeData(jsonPayload.data);
         bubblesProperty.setValue(json.bubbles.toString())
         nozzlesProperty.setValue(json.jets.toString())
         pumpProperty.setValue(json.filter.toString());
@@ -162,11 +135,24 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         tempPresetProperty.setValue(json.presetTemp.toString())
         if (json.errorCode)
             plat.publishStatus(DeviceStatus.alert)
+
+        if (plat.status != DeviceStatus.ready) plat.publishStatus(DeviceStatus.ready);
+
+        client.destroy();
+    });
+    // client.setKeepAlive(true, 5000);
+
+    type DataPayload = { type: number, data: string, sid?: string };
+    function sendData(payload: DataPayload): void {
+        client.connect(device.intexPort, device.intexIp, function () {
+            const command = prepareCommand(payload)
+
+            client.write(command);
+        });
     }
 
-    async function sendAndSync(payload: DataPayload) {
-        const response = await sendData(payload)
-        sync(response.data)
+    function sync() {
+        sendData(commands.status);
     }
 
     plat.init();
