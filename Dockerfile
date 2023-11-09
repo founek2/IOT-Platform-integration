@@ -1,5 +1,7 @@
 FROM denoland/deno
 
+RUN apt update && apt install -y pipx && apt clean && pipx install catt
+
 WORKDIR /app
 
 COPY ./ ./
