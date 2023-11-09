@@ -2,7 +2,7 @@ FROM denoland/deno
 
 ENV PATH="${PATH}:/root/.local/bin"
 
-RUN apt update && apt install -y python3-pip && apt clean && pip3 install catt
+RUN apt update && apt install -y pipx && apt clean && pipx install catt
 
 WORKDIR /app
 
