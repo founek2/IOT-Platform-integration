@@ -36,10 +36,10 @@ export const commands = {
         data: "8888050F0C" + temp.toString(16).toUpperCase(),
         type: 1
     }),
-    // "info": {
-    //     data: "",
-    //     type: info
-    // },
+    "info": {
+        data: "",
+        type: 3
+    },
 }
 
 function power(data: bigint) {
