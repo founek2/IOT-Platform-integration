@@ -119,12 +119,16 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         } else
             logger.error(err);
 
-        client.destroy();
+        client.end();
     });
 
     client.on('data', (message: Buffer) => {
         const jsonPayload = JSON.parse(message.toString());
 
+        if (jsonPayload.type != 2) {
+            client.end()
+            return;
+        }
         const json = decodeData(jsonPayload.data);
         bubblesProperty.setValue(json.bubbles.toString())
         nozzlesProperty.setValue(json.jets.toString())
@@ -138,7 +142,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
 
         if (plat.status != DeviceStatus.ready) plat.publishStatus(DeviceStatus.ready);
 
-        client.destroy();
+        client.end();
     });
     // client.setKeepAlive(true, 5000);
 
@@ -153,6 +157,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
 
     function sync() {
         sendData(commands.status);
+        // sendData(commands.info);
     }
 
     plat.init();
