@@ -114,11 +114,15 @@ for (const moduleType of moduleTypes) {
             continue
         }
 
-        const instance = await constructDevice(id, device, module)
-        if (!instance) continue
+        try {
+            const instance = await constructDevice(id, device, module)
+            if (!instance) continue
 
-        logger.info(`Registered ${moduleType} ${id}`)
-        devices[moduleType].push(instance)
+            logger.info(`Registered ${moduleType} ${id}`)
+            devices[moduleType].push(instance)
+        } catch (err) {
+            logger.error(`Failed to register ${moduleType} ${id}`, err)
+        }
     }
 }
 
