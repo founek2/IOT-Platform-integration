@@ -31,7 +31,7 @@ export async function spawnDevices(
         platforms.push(plat);
 
         const thing = plat.addNode(
-            device.friendly_name || "Node",
+            "node",
             device.friendly_name || "Node",
             ComponentType.generic,
         );
