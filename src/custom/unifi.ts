@@ -36,22 +36,27 @@ export const factory: FactoryFn<WatcherConfig> = function (_config, device, logg
     const client = new UnifiClient(device.unifiControllerUrl, device.unifiUserName, device.unifiPassword)
 
     async function runSync() {
-        await client.login()
-        const activeDevices = await client.listActiveDevices()
+        try {
+            await client.login()
 
-        for (const { hosts, webhooksUp, webhooksDown } of device.unifiWatcher) {
+            const activeDevices = await client.listActiveDevices()
 
-            const isOnline = activeDevices.some(d => hosts.includes(d.ip))
-            const cacheKey = hosts.join();
-            if (isOnline && !cache[cacheKey]) {
-                cache[cacheKey] = isOnline
+            for (const { hosts, webhooksUp, webhooksDown } of device.unifiWatcher) {
 
-                callAllWebhooks(webhooksUp, logger)
-            } else if (!isOnline && cache[cacheKey]) {
-                cache[cacheKey] = isOnline
+                const isOnline = activeDevices.some(d => hosts.includes(d.ip))
+                const cacheKey = hosts.join();
+                if (isOnline && !cache[cacheKey]) {
+                    cache[cacheKey] = isOnline
 
-                callAllWebhooks(webhooksDown, logger)
+                    callAllWebhooks(webhooksUp, logger)
+                } else if (!isOnline && cache[cacheKey]) {
+                    cache[cacheKey] = isOnline
+
+                    callAllWebhooks(webhooksDown, logger)
+                }
             }
+        } catch (err) {
+            logger.error(err)
         }
     }
 
@@ -63,7 +68,11 @@ export const factory: FactoryFn<WatcherConfig> = function (_config, device, logg
             clearInterval(interval)
 
             for (const { webhooksDown } of device.unifiWatcher) {
-                await callAllWebhooks(webhooksDown, logger)
+                try {
+                    await callAllWebhooks(webhooksDown, logger)
+                } catch (err) {
+                    logger.error(err)
+                }
             }
         },
         healthCheck: function () {
