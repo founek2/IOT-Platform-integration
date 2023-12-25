@@ -57,7 +57,7 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
             await yamaha.sync()
 
             const power = yamaha.getPower();
-            if (power) recieverPower.setValue(power)
+            if (power) recieverPower.setValue(power == "on" ? "true" : "false")
 
             const input = yamaha.getInput();
             if (input) recieverInput.setValue(input)
