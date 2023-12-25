@@ -37,7 +37,7 @@ Exposing of all devices.
   - control: heating, bubbles, nozzles, filtration
 - Solax inverter - integrated via Solax Cloud service, since gen X3 does not allow reading of MQTT messages (before it was just plain JSON)
   - Reading of all available values
-- Yamaha reciever
+- Yamaha reciever - [API spec](./_media/yamaha_API_spec.pdf)
   - turn on/off
   - change input
   - change volume
