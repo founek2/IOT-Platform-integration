@@ -228,7 +228,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
             console.log('No update for 30 mins -> forcing sync');
             syncPlatform();
         }
-    }, 30 * 60 * 1000);
+    }, 6 * 60 * 1000);
 
     return {
         cleanUp: function () {
