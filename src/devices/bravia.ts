@@ -1,8 +1,8 @@
 import { exec } from "https://deno.land/x/exec@0.0.5/mod.ts";
 import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
-import Bravia from "npm:bravia@^1.3.3";
 import { FactoryFn } from '../types.ts';
 import SchemaValidator, { Type, string, number, array } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import { BraviaClient } from "./bravia/BraviaClient.ts"
 
 const ActionSchema = SchemaValidator({
     name: string,
@@ -18,28 +18,13 @@ export const Schema = SchemaValidator({
 type BraviaConfig = Type<typeof Schema>;
 
 export const factory: FactoryFn<BraviaConfig> = function (config, device, logger) {
-    const bravia = new Bravia(device.braviaIp, '80', device.braviaPsk);
+    const bravia = new BraviaClient(device.braviaIp, device.braviaPsk);
 
-    async function getVolume(): Promise<number | never> {
-        const info = await bravia.audio.invoke('getVolumeInformation');
-        return info.find((obj: any) => obj.target === 'speaker')?.volume;
-    }
+    // bravia.audio.getMethodTypes()
+    //     .then((info: any) => console.log(info))
+    //     .catch((error: any) => console.error(error));
 
-    async function getPowerStatus(): Promise<'active' | 'standby'> {
-        const info = await bravia.system.invoke('getPowerStatus');
-        return info.status;
-    }
 
-    function setVolume(volume: string) {
-        return bravia.audio.invoke('setAudioVolume', '1.0', {
-            target: 'speaker',
-            volume: volume,
-        });
-    }
-
-    function setPowerStatus(bool: boolean) {
-        return bravia.system.invoke('setPowerStatus', '1.0', { status: bool });
-    }
 
     const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
 
@@ -50,8 +35,8 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
         name: 'TV',
         settable: true,
         callback: async (newValue) => {
-            if (newValue === 'true') await setPowerStatus(true);
-            else await setPowerStatus(false);
+            if (newValue === 'true') await bravia.setPowerStatus(true);
+            else await bravia.setPowerStatus(false);
             return true;
         },
     });
@@ -63,7 +48,21 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
         name: 'TV',
         settable: true,
         callback: async (newValue) => {
-            await setVolume(newValue);
+            await bravia.setVolume(newValue);
+            return true
+        },
+    });
+
+    const muteProperty = nodeLight.addProperty({
+        propertyId: 'mute',
+        dataType: PropertyDataType.boolean,
+        name: 'Ztlumit',
+        settable: true,
+        callback: async (newValue) => {
+            if (newValue == "true")
+                await bravia.muteSpeaker()
+            else
+                await bravia.unmuteSpeaker()
             return true
         },
     });
@@ -96,12 +95,14 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
 
     async function syncPlatform() {
         try {
-            const power = await getPowerStatus();
-            powerProperty.setValue(power == 'active' ? 'true' : 'false');
+            await bravia.sync();
 
-            if (power === "active") {
-                const volume = await getVolume();
-                volumeProperty.setValue(String(volume));
+            powerProperty.setValue(bravia.getPowerStatus() == 'active' ? 'true' : 'false');
+
+            if (bravia.getPowerStatus() === "active") {
+                const volume = bravia.getVolume()?.toString()
+                if (volume) volumeProperty.setValue(volume);
+                muteProperty.setValue(bravia.isMuted().toString())
             }
         } catch (e: any) {
             if (e.code === 'EHOSTUNREACH' || e.code === 'ETIMEDOUT') {
