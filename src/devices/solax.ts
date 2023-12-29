@@ -1,11 +1,11 @@
 import SchemaValidator, { Type, string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import fetch from 'npm:node-fetch@3.3.2';
-import mqtt from 'npm:mqtt@5';
+// import mqtt from 'npm:mqtt@5';
 import { FactoryFn } from '../types.ts';
 
-const MIN_30 = 30 * 60 * 1000; /* ms */
-const SEC_10 = 10 * 1000; /* ms */
+const MIN_5 = 5 * 60 * 1000; /* ms */
+// const SEC_10 = 10 * 1000; /* ms */
 // const API_TOKEN = Deno.env.get("API_TOKEN");
 // const REGISTRATION_NUMBER = Deno.env.get("REGISTRATION_NUMBER");
 // const MQTT_PASSWORD = Deno.env.get("SOLAX_MQTT_PASSWORD");
@@ -23,26 +23,26 @@ type IntexConfig = Type<typeof Schema>;
 
 
 export const factory: FactoryFn<IntexConfig> = function (config, device, logger) {
-    const client = mqtt.connect('mqtt://mqtt002.solaxcloud.com', {
-        username: device.solaxRegistrationNumber,
-        password: device.solaxMqttPassword,
-        port: 2901,
-    });
+    // const client = mqtt.connect('mqtt://mqtt002.solaxcloud.com', {
+    //     username: device.solaxRegistrationNumber,
+    //     password: device.solaxMqttPassword,
+    //     port: 2901,
+    // });
 
-    client.on('connect', function () {
-        logger.debug('connected');
-        client.subscribe('loc/tsp/SYSGQEJMDS', function (err) {
-            if (err) {
-                console.error(err);
-            }
-        });
-    });
+    // client.on('connect', function () {
+    //     logger.debug('connected');
+    //     client.subscribe('loc/tsp/SYSGQEJMDS', function (err) {
+    //         if (err) {
+    //             console.error(err);
+    //         }
+    //     });
+    // });
 
-    client.on('message', function (topic, message) {
-        // wait for Solax to sync their API
-        logger.debug(`got message, sync in ${SEC_10} seconds`);
-        setTimeout(() => syncPlatform(), SEC_10);
-    });
+    // client.on('message', function (topic, message) {
+    //     // wait for Solax to sync their API
+    //     logger.debug(`got message, sync in ${SEC_10} seconds`);
+    //     setTimeout(() => syncPlatform(), SEC_10);
+    // });
 
     interface SolaxResponse {
         success: boolean;
@@ -224,11 +224,8 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
 
     syncPlatform();
     const syncInterval = setInterval(() => {
-        if (!lastUploadTime || Date.now() - new Date(lastUploadTime).getTime() > MIN_30) {
-            console.log('No update for 30 mins -> forcing sync');
-            syncPlatform();
-        }
-    }, 6 * 60 * 1000);
+        syncPlatform();
+    }, MIN_5);
 
     return {
         cleanUp: function () {
