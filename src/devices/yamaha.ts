@@ -1,16 +1,20 @@
 import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, number } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { YamahaClient, YamahaInput } from "./yamaha/YamahaClient.ts"
 
 export const Schema = SchemaValidator({
     yamahaIp: string,
+    yamahaEventPort: number.optional()
 })
 
 type YamahaConfig = Type<typeof Schema>;
 
 export const factory: FactoryFn<YamahaConfig> = function (config, device, logger) {
-    const yamaha = new YamahaClient(device.yamahaIp);
+    if (device.yamahaEventPort)
+        logger.info("Enabling events subscription")
+
+    const yamaha = new YamahaClient(device.yamahaIp, device.yamahaEventPort);
 
     const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
 
@@ -52,6 +56,13 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
 
     plat.init();
 
+    yamaha.on("power", (power) => {
+        logger.debug("Recieved power event", power)
+        recieverPower.setValue(power == "on" ? "true" : "false")
+    })
+    yamaha.on("input", (input) => recieverInput.setValue(input))
+    yamaha.on("volume", (volume) => recieverVolume.setValue(volume.toString()))
+
     async function syncPlatform() {
         try {
             await yamaha.sync()
@@ -72,7 +83,7 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
     }
 
     syncPlatform();
-    const syncInterval = setInterval(syncPlatform, 3 * 60 * 1000);
+    const syncInterval = setInterval(syncPlatform, 5 * 60 * 1000);
 
     return {
         cleanUp: function () {
