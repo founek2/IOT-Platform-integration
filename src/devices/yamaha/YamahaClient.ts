@@ -1,45 +1,6 @@
 import EventEmitter from "https://deno.land/x/eventemitter@1.2.4/mod.ts"
 import { Input, Power, YamahaEvent } from "./type.ts";
 
-class YamahaEventListener extends EventEmitter<{
-    power(value: Power): any
-    input(value: Input): any
-    volume(value: number): any
-}> {
-    con?: Deno.DatagramConn
-    sourceIp: string
-    eventPort?: number
-
-    constructor(sourceIp: string, port?: number) {
-        super()
-
-        this.sourceIp = sourceIp;
-        this.eventPort = port;
-        if (!port) return
-
-        this.con = Deno.listenDatagram({ port, transport: "udp", hostname: "0.0.0.0" });
-        this.handle()
-    }
-
-    async handle() {
-        if (!this.con) return
-
-        const decoder = new TextDecoder()
-
-        for await (const [data, source] of this.con) {
-            if (this.sourceIp !== (source as Deno.NetAddr).hostname) continue;
-
-            const body = JSON.parse(decoder.decode(data)) as YamahaEvent;
-
-            if (body.main?.power) this.emit("power", body.main.power)
-            if (body.main?.volume) this.emit("volume", body.main.volume)
-            if (body.main?.input) this.emit("input", body.main.input)
-        }
-    }
-}
-
-// const evenListener = new YamahaEventListener(EVENTS_PORT)
-
 export enum YamahaInput {
     net_radio = "net_radio",
     bluetooth = "bluetooth",
@@ -48,24 +9,52 @@ export enum YamahaInput {
     line1 = "line1"
 }
 
-export class YamahaClient extends YamahaEventListener {
-    server: string
+export class YamahaClient extends EventEmitter<{
+    power(value: Power): any
+    input(value: Input): any
+    volume(value: number): any
+}> {
+    ip: string
+    eventPort?: number;
+    con?: Deno.DatagramConn
+
     power?: Power;
     volume?: number;
     input?: YamahaInput;
 
     constructor(ip: string, eventPort?: number) {
-        super(ip, eventPort)
+        super()
 
-        this.server = `http://${ip}`
+        this.ip = ip
+        this.eventPort = eventPort
 
         this.on("power", (v) => this.power = v)
         this.on("input", (v) => this.input = (v as YamahaInput))
         this.on("volume", (v) => this.volume = v)
+
+        if (!this.eventPort) return;
+
+        this.con = Deno.listenDatagram({ port: this.eventPort, transport: "udp", hostname: "0.0.0.0" });
+        this._handleEvents()
+    }
+
+    async _handleEvents() {
+        if (!this.con) return
+
+        const decoder = new TextDecoder()
+        for await (const [data, source] of this.con) {
+            if (this.ip !== (source as Deno.NetAddr).hostname) continue;
+
+            const body = JSON.parse(decoder.decode(data)) as YamahaEvent;
+
+            if (body.main?.power && this.power !== body.main?.power) this.emit("power", body.main.power)
+            if (body.main?.volume && this.volume !== body.main?.volume) this.emit("volume", body.main.volume)
+            if (body.main?.input && this.input !== body.main?.input) this.emit("input", body.main.input)
+        }
     }
 
     sendRequest(path: string) {
-        return fetch(this.server + path, {
+        return fetch(`http://${this.ip}${path}`, {
             headers: {
                 "X-AppName": "MusicCast/1.0(deno)",
                 "X-AppPort": String(this.eventPort || ""),
@@ -76,11 +65,11 @@ export class YamahaClient extends YamahaEventListener {
     async sync() {
         const res = await this.sendRequest("/YamahaExtendedControl/v1/main/getStatus")
         if (!res.ok) return this;
-        const body = await res.json()
+        const { power, volume, input } = await res.json()
 
-        this.power = body["power"]
-        this.volume = body["volume"]
-        this.input = body["input"]
+        if (this.power !== power) this._emitPower(power)
+        if (this.volume !== volume) this._emitVolume(volume)
+        if (this.input !== input) this._emitInput(input)
 
         return this;
     }
@@ -89,7 +78,7 @@ export class YamahaClient extends YamahaEventListener {
         const res = await this.sendRequest("/YamahaExtendedControl/v1/main/setPower?power=on")
         if (!res.ok) return false
 
-        this.power = "on"
+        this._emitPower("on")
         return true
     }
 
@@ -97,7 +86,7 @@ export class YamahaClient extends YamahaEventListener {
         const res = await this.sendRequest("/YamahaExtendedControl/v1/main/setPower?power=standby")
         if (!res.ok) return false;
 
-        this.power = "standby"
+        this._emitPower("standby")
         return true;
     };
 
@@ -105,7 +94,7 @@ export class YamahaClient extends YamahaEventListener {
         const res = await this.sendRequest(`/YamahaExtendedControl/v1/main/setInput?input=${input}`)
         if (!res.ok) return false;
 
-        this.input = input
+        this._emitInput(input)
         return true;
     };
 
@@ -116,7 +105,7 @@ export class YamahaClient extends YamahaEventListener {
         const res = await this.sendRequest(`/YamahaExtendedControl/v1/main/setVolume?volume=${volume}`)
         if (!res.ok) return false;
 
-        this.volume = volume
+        this._emitVolume(volume)
         return true;
     };
 
@@ -131,5 +120,17 @@ export class YamahaClient extends YamahaEventListener {
 
     getInput() {
         return this.input;
+    }
+
+    _emitPower(power: Power) {
+        this.emit("power", power)
+    }
+
+    _emitInput(input: Input) {
+        this.emit("input", input)
+    }
+
+    _emitVolume(volume: number) {
+        this.emit("volume", volume)
     }
 };
