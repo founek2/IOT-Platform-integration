@@ -22,14 +22,12 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
     const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
 
     const nodeLight = plat.addNode('sms', 'Sms', ComponentType.sensor);
-    const smsCounterProperty = nodeLight.addProperty({
-        propertyId: 'sendCount',
-        dataType: PropertyDataType.integer,
+    const smsSendProperty = nodeLight.addProperty({
+        propertyId: 'sendSms',
+        dataType: PropertyDataType.enum,
+        format: "true",
         name: 'SMS odesláno',
     });
-
-    let counter = 0;
-    smsCounterProperty.setValue("0")
 
     plat.init();
     console.log(plat.status)
@@ -50,7 +48,7 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
                     sendMessageViaTwillio(device.endpoint, device.fromNumber, action.smsNumber, action.smsValue, device.basicAuth)
                         .then(res => {
                             if (res.ok) {
-                                smsCounterProperty.setValue(`${++counter}`)
+                                smsSendProperty.setValue("true")
                             } else {
                                 throw new Error(`Invalid http status ${res.status}`)
                             }
