@@ -113,9 +113,11 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
     // });
     client.on('error', function (err: any) {
         if (err.code === 'ETIMEDOUT') {
-            plat.publishStatus(DeviceStatus.alert);
+            if (plat.status !== DeviceStatus.alert)
+                plat.publishStatus(DeviceStatus.alert);
         } else if (err.code === 'ECONNREFUSED') {
-            plat.publishStatus(DeviceStatus.disconnected);
+            if (plat.status !== DeviceStatus.disconnected)
+                plat.publishStatus(DeviceStatus.disconnected);
         } else
             logger.error(err);
 
