@@ -25,6 +25,7 @@ Exposing of all devices.
 
 - Frigate (NVR) - integrate all your cameras, show current feed and events (snapshots)
 - Zigbee2mqtt - integrate all your Zigbee devices
+- Twilio - send sms message as reaction to Mqtt message
 
 ## Devices
 
@@ -41,6 +42,7 @@ Exposing of all devices.
   - turn on/off
   - change input
   - change volume
+- sms
 
 ## Examples
 
