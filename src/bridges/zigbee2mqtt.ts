@@ -1,4 +1,4 @@
-import SchemaValidator, { Type, string, number } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, number, array } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { Platform, DeviceStatus, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { FactoryFn } from '../types.ts';
 import mqtt from "npm:mqtt@5";
@@ -6,6 +6,7 @@ import { Device, DeviceExposesGeneric } from "./zigbee2mqtt/convertor.ts"
 import { topicParser } from './zigbee2mqtt/topicParser.ts';
 import { calculateHash } from './zigbee2mqtt/hash.ts';
 import { spawnDevices } from './zigbee2mqtt/spawnDevices.ts';
+import { filterByWhitelist } from './zigbee2mqtt/whitelistFilter.ts';
 
 export const Schema = SchemaValidator({
     deeplApiKey: string.optional(),
@@ -13,7 +14,8 @@ export const Schema = SchemaValidator({
         uri: string,
         port: number,
         prefix: string.optional("zigbee2mqtt")
-    }
+    },
+    whitelist: array.of(string).optional()
 })
 
 type Zigbee2MqttConfig = Type<typeof Schema>;
@@ -54,8 +56,12 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
                 return
             }
 
+            const definitions = JSON.parse(devicesStr) as unknown as Device[]
+
             globalData = {
-                devices: JSON.parse(devicesStr) as unknown as Device[],
+                devices: bridge.whitelist
+                    ? definitions.filter(filterByWhitelist(bridge.whitelist))
+                    : definitions,
                 fingerprint: hash,
             };
 
