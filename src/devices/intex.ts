@@ -146,16 +146,21 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
 
         client.end();
     });
-    // client.setKeepAlive(true, 5000);
+
+    let commandToSend: string | undefined;
+    client.on("connect", function () {
+        if (!commandToSend) return;
+
+        client.write(commandToSend);
+        commandToSend = undefined;
+    })
 
     type DataPayload = { type: number, data: string, sid?: string };
     function sendData(payload: DataPayload): void {
-        client.connect(device.intexPort, device.intexIp, function () {
-            const command = prepareCommand(payload)
-
-            client.write(command);
-        });
+        commandToSend = prepareCommand(payload);
+        client.connect(device.intexPort, device.intexIp);
     }
+
 
     function sync() {
         sendData(commands.status);
