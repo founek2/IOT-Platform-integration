@@ -11,4 +11,5 @@ COPY ./ ./
 # Run once to load all dependencies in modules
 RUN deno run -A src/index.ts || true
 
-CMD ["deno", "run", "-A", "--unstable-net", "--unsafely-ignore-certificate-errors", "src/index.ts", "--config", "/config.yaml"]
+# --unstable-fs is required for localStorage package
+CMD ["deno", "run", "-A", "--unstable-net", "--unstable-fs", "--unsafely-ignore-certificate-errors", "src/index.ts", "--config", "/config.yaml"]
