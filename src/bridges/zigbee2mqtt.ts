@@ -71,7 +71,7 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
 
             // Backfill last known availability from cache
             Object.entries(availabilityCache).forEach(([friendly_name, status]) => {
-                const plat = instances.find((p) => p.deviceName === friendly_name);
+                const plat = instances.find(byIdOrName(friendly_name));
                 if (!plat || !status) return;
 
                 plat.publishStatus(status)
@@ -80,7 +80,7 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
         });
 
         handle(`${bridge.zigbeeMqtt.prefix}/+`, function (_topic, message, [friendly_name]) {
-            const plat = instances.find((p) => p.deviceName === friendly_name || p.deviceId === friendly_name);
+            const plat = instances.find(byIdOrName(friendly_name));
             if (!plat) return;
 
             const data: { [key: string]: string | number | boolean } = JSON.parse(message.toString());
@@ -90,11 +90,21 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
                 plat.publishPropertyData(
                     propertyId,
                     (_node, property) => {
+
                         const device = globalData.devices.find((d) =>
                             d.friendly_name === friendly_name
                         );
-                        const exposes = device?.definition?.exposes.find((expose) =>
-                            (expose as DeviceExposesGeneric)?.property === propertyId
+
+                        const exposes = device?.definition?.exposes.reduce<DeviceExposesGeneric | undefined>((acc, expose) => {
+                            switch (expose.type) {
+                                case "switch": {
+                                    const found = expose.features.find(expose => expose.property === propertyId)
+                                    return found || acc;
+                                }
+                                default:
+                                    return expose.property === propertyId ? expose : acc
+                            }
+                        }, undefined
                         );
                         if (!exposes) return value;
 
@@ -154,4 +164,8 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
             }))
         }
     }
+}
+
+function byIdOrName(friendlyName: string) {
+    return (p: Platform) => p.deviceName === friendlyName || p.deviceId === friendlyName
 }
