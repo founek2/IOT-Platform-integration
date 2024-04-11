@@ -96,16 +96,13 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
                         );
 
                         const exposes = device?.definition?.exposes.reduce<DeviceExposesGeneric | undefined>((acc, expose) => {
-                            switch (expose.type) {
-                                case "switch": {
-                                    const found = expose.features.find(expose => expose.property === propertyId)
-                                    return found || acc;
-                                }
-                                default:
-                                    return expose.property === propertyId ? expose : acc
+                            if ('features' in expose) {
+                                const found = expose.features.find(expose => expose.property === propertyId)
+                                return found || acc;
                             }
-                        }, undefined
-                        );
+
+                            return expose.property === propertyId ? expose : acc
+                        }, undefined);
                         if (!exposes) return value;
 
                         if (
