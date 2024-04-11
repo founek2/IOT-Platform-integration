@@ -1,16 +1,21 @@
 import { PropertyDataType, Node, Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import translateDeepl from "npm:translate";
 
+
 function translate(text: string, deeplApiKey?: string): string | Promise<string> {
   if (!deeplApiKey) return text;
 
   if (text === "linkquality") return "Síla signálu";
   if (text === "state") return "stav";
 
+  /** @ts-ignore */
+  translateDeepl.engine = "deepl";
+  /** @ts-ignore */
+  translateDeepl.key = deeplApiKey;
+
   return translateDeepl(text.replace(/_/g, " "), {
-    engine: "deepl",
-    key: deeplApiKey,
     to: "cs",
+    from: "en"
   });
 }
 
