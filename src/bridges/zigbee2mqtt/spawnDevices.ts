@@ -37,26 +37,24 @@ export async function spawnDevices(
         );
 
         for (const node of device.definition?.exposes || []) {
-            switch (node.type) {
-                case "switch":
-                    for (const property of node.features) {
-                        await assignProperty(
-                            property,
-                            thing,
-                            publishSetToZigbee(friendly_name, property.name),
-                            config.deeplApiKey,
-                            logger
-                        );
-                    }
-                    break;
-                default:
+            if ('features' in node) {
+                for (const property of node.features) {
                     await assignProperty(
-                        node,
+                        property,
                         thing,
-                        publishSetToZigbee(friendly_name, node.name),
+                        publishSetToZigbee(friendly_name, property.name),
                         config.deeplApiKey,
                         logger
                     );
+                }
+            } else {
+                await assignProperty(
+                    node,
+                    thing,
+                    publishSetToZigbee(friendly_name, node.name),
+                    config.deeplApiKey,
+                    logger
+                );
             }
         }
 

@@ -1,7 +1,7 @@
 import { PropertyDataType, Node, Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import translateDeepl from "npm:translate";
 
-function translate(text: string, deeplApiKey?: string) {
+function translate(text: string, deeplApiKey?: string): string | Promise<string> {
   if (!deeplApiKey) return text;
 
   if (text === "linkquality") return "Síla signálu";
@@ -117,6 +117,7 @@ export async function assignProperty(
 
           return Promise.resolve(false);
         },
+        format: expose.value_min !== undefined && expose.value_max !== undefined ? `${expose.value_min}:${expose.value_max}` : undefined
       });
       break;
     case "binary":
