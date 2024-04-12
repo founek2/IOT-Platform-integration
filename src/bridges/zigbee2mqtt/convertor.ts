@@ -1,158 +1,141 @@
-import { PropertyDataType, Node, Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
-import translateDeepl from "npm:translate";
+import { PropertyDataType, PropertyArgs } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { DeviceExposesSwitch } from "./zigbeeTypes.ts";
+import { DeviceExposesGeneric } from "./zigbeeTypes.ts";
+import { Device } from "./zigbeeTypes.ts";
 
+export type TransformedExpose = PropertyArgs & { translateForZigbee?: (value: any) => any, translateForPlatform?: (value: any) => any }
+export type TransformedExposes =
+  TransformedExpose | { type: string, features: TransformedExpose[] }
 
-function translate(text: string, deeplApiKey?: string): string | Promise<string> {
-  if (!deeplApiKey) return text;
-
-  if (text === "linkquality") return "Síla signálu";
-  if (text === "state") return "stav";
-
-  /** @ts-ignore */
-  translateDeepl.engine = "deepl";
-  /** @ts-ignore */
-  translateDeepl.key = deeplApiKey;
-
-  return translateDeepl(text.replace(/_/g, " "), {
-    to: "cs",
-    from: "en"
-  });
-}
-
-export interface Device {
-  definition: DeviceDefinition | null;
+export interface DeviceTransformed {
+  definition: DeviceDefinitionTransformed | null;
   ieee_address: string;
-  friendly_name?: string;
+  friendly_name: string;  // z2m defaults to ieee_address
 }
-export interface DeviceDefinition {
+export interface DeviceDefinitionTransformed {
   // contains device full name
   description: string;
   model: string;
   vendor: string;
-  exposes: (DeviceExposesGeneric | DeviceExposesSwitch)[];
+  exposes: TransformedExposes[];
 }
 
-export interface DeviceExposesText {
-  type: "text";
-  access: number;
-  name: string;
-  property: string;
-  description: string;
+
+type PropertyOverride = {
+  name?: string,
+  format?: string,
+  type?: PropertyDataType,
 }
-export interface DeviceExposesEnum {
-  type: "enum";
-  access: number;
-  name: string;
-  property: string;
-  description: string;
-  values?: string[];
+type DeviceOverride = {
+  name?: string,
+  properties?: Record<string, PropertyOverride | undefined> | undefined
+}
+type Override = Record<string, DeviceOverride | undefined>
+export function transformAndOverrideDevice(devices: Device[], overrides: Override = {}): DeviceTransformed[] {
+  return devices.map(device => {
+    const override = overrides[device.friendly_name]
+    if (override?.name) device.friendly_name = override.name;
+
+    const dev: DeviceTransformed = {
+      ...device,
+      definition: (device.definition ? {
+        ...device.definition,
+        exposes: device.definition?.exposes.map(transformAndOverrideProperty(override?.properties)) || []
+      } : null)
+    }
+    return dev
+  })
 }
 
-export interface DeviceExposesNumeric {
-  type: "numeric";
-  access: number;
-  name: string;
-  property: string;
-  description: string;
-  unit?: string;
-  value_max?: number;
-  value_min?: number;
-}
+function transformAndOverrideProperty(override: DeviceOverride['properties'] = {}) {
+  function applySingle(expose: DeviceExposesGeneric): TransformedExposes {
+    const propOverride = override[expose.property]
 
-export interface DeviceExposesBinary {
-  type: "binary";
-  access: number;
-  name: string;
-  property: string;
-  description: string;
-  value_off: string;
-  value_on: string;
-}
-export type DeviceExposesGeneric =
-  | DeviceExposesBinary
-  | DeviceExposesNumeric
-  | DeviceExposesEnum
-  | DeviceExposesText;
+    const transformed = transformProperty(expose)
+    if (propOverride?.type) {
+      transformed.dataType = propOverride.type
+      if (transformed.dataType === PropertyDataType.color) {
+        transformed.translateForZigbee = (value: string) => {
+          return JSON.stringify({ rgb: value })
+        }
+      }
+    }
 
-export interface DeviceExposesSwitch {
-  type: "switch";
-  features: DeviceExposesGeneric[];
+    if (propOverride?.name) transformed.name = propOverride.name
+    if (propOverride?.format) transformed.format = propOverride.format
+    return transformed
+  }
+
+  function apply(expose: DeviceExposesGeneric | DeviceExposesSwitch): TransformedExposes {
+    if ('features' in expose && expose.type != "composite") {
+      const property: TransformedExposes = {
+        type: expose.type,
+        features: expose.features.map(applySingle) as PropertyArgs[]
+      }
+
+      return property
+    }
+
+    return applySingle(expose);
+  }
+
+  return apply
 }
 
 const settableMask = 1 << 1;
 
-export async function assignProperty(
+export function transformProperty(
   expose: DeviceExposesGeneric,
-  thing: Node,
-  publishBridge: (value: string) => void,
-  deeplApiKey: string | undefined,
-  log: Logger
-) {
-  const translatedName = await translate(expose.name, deeplApiKey);
-
+): TransformedExpose {
+  const name = expose.label || expose.name.replace(/_/g, " ")
   switch (expose.type) {
     case "enum":
-      thing.addProperty({
+      return {
         propertyId: expose.property,
         dataType: PropertyDataType.enum,
-        name: translatedName,
+        name,
         settable: Boolean(expose.access & settableMask),
         format: expose.values?.join(","),
-        callback: (newValue) => {
-          log.debug("recieved enum:", newValue);
-          publishBridge(newValue!);
-
-          // returns false, setting value will be handled once device confirms change
-          return Promise.resolve(false);
-        },
-      });
-      break;
+      }
     case "numeric":
-      thing.addProperty({
+      return {
         propertyId: expose.property,
         dataType: expose.property.includes("time") || expose.property.includes("duration")
           ? PropertyDataType.string
           : PropertyDataType.float,
-        name: translatedName,
+        name,
         settable: Boolean(expose.access & settableMask),
         unitOfMeasurement: expose.unit,
-        callback: (newValue) => {
-          log.debug("recieved float:", newValue);
-          publishBridge(newValue!);
-
-          return Promise.resolve(false);
-        },
         format: expose.value_min !== undefined && expose.value_max !== undefined ? `${expose.value_min}:${expose.value_max}` : undefined
-      });
-      break;
+      };
     case "binary":
-      thing.addProperty({
+      return {
         propertyId: expose.property,
         dataType: PropertyDataType.boolean,
-        name: translatedName,
+        name,
         settable: Boolean(expose.access & settableMask),
-        callback: (newValue) => {
-          log.debug("recieved binary:", newValue);
-          if (newValue === "true") publishBridge(expose.value_on);
-          else publishBridge(expose.value_off);
-
-          return Promise.resolve(false);
+        translateForZigbee: (newValue) => {
+          if (newValue === "true") return expose.value_on;
+          else return expose.value_off;
         },
-      });
-      break;
+        translateForPlatform: (newValue) => {
+          if (expose.value_on === newValue) return "true";
+          else return "false"
+        },
+      };
     case "text":
-      thing.addProperty({
+      return {
         propertyId: expose.property,
         dataType: PropertyDataType.string,
-        name: translatedName,
+        name,
         settable: Boolean(expose.access & settableMask),
-        callback: (newValue) => {
-          log.debug("recieved text:", newValue);
-          publishBridge(newValue!);
-
-          return Promise.resolve(false);
-        },
-      });
-      break;
+      };
+    case "composite":
+      return {
+        propertyId: expose.property,
+        dataType: PropertyDataType.string,
+        name,
+        settable: Boolean(expose.access & settableMask),
+      };
   }
 }

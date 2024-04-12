@@ -2,11 +2,23 @@ import SchemaValidator, { Type, string, number, array } from 'https://denoporter
 import { Platform, DeviceStatus, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { FactoryFn } from '../types.ts';
 import mqtt from "npm:mqtt@5";
-import { Device, DeviceExposesGeneric } from "./zigbee2mqtt/convertor.ts"
+import { DeviceTransformed, TransformedExpose } from "./zigbee2mqtt/convertor.ts"
 import { topicParser } from './zigbee2mqtt/topicParser.ts';
 import { calculateHash } from './zigbee2mqtt/hash.ts';
 import { spawnDevices } from './zigbee2mqtt/spawnDevices.ts';
 import { filterByWhitelist } from './zigbee2mqtt/whitelistFilter.ts';
+import { Device } from './zigbee2mqtt/zigbeeTypes.ts';
+import { transformAndOverrideDevice } from './zigbee2mqtt/convertor.ts';
+
+const propertySchema = SchemaValidator({
+    name: string.optional(),
+    type: SchemaValidator.enum(PropertyDataType),
+    format: string.optional(),
+})
+const overrideSchema = SchemaValidator({
+    name: string.optional(),
+    properties: SchemaValidator.record(string, propertySchema).optional()
+})
 
 export const Schema = SchemaValidator({
     deeplApiKey: string.optional(),
@@ -15,14 +27,15 @@ export const Schema = SchemaValidator({
         port: number,
         prefix: string.optional("zigbee2mqtt")
     },
-    whitelist: array.of(string).optional()
+    whitelist: array.of(string).optional(),
+    override: SchemaValidator.record(string, overrideSchema).optional()
 })
 
 type Zigbee2MqttConfig = Type<typeof Schema>;
 
 export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, logger) {
     let instances: Platform[] = [];
-    let globalData: { devices: Device[], fingerprint: string } = { devices: [], fingerprint: "" };
+    let globalData: { devices: DeviceTransformed[], fingerprint: string } = { devices: [], fingerprint: "" };
     const availabilityCache: Record<string, DeviceStatus | undefined> = {};
 
     const zigbeeClient = mqtt.connect(bridge.zigbeeMqtt.uri, {
@@ -57,11 +70,12 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
             }
 
             const definitions = JSON.parse(devicesStr) as unknown as Device[]
+            const filteredDefinitions = bridge.whitelist
+                ? definitions.filter(filterByWhitelist(bridge.whitelist))
+                : definitions;
 
             globalData = {
-                devices: bridge.whitelist
-                    ? definitions.filter(filterByWhitelist(bridge.whitelist))
-                    : definitions,
+                devices: transformAndOverrideDevice(filteredDefinitions, bridge.override),
                 fingerprint: hash,
             };
 
@@ -95,28 +109,17 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
                             d.friendly_name === friendly_name
                         );
 
-                        const exposes = device?.definition?.exposes.reduce<DeviceExposesGeneric | undefined>((acc, expose) => {
+                        const exposes = device?.definition?.exposes.reduce<TransformedExpose | undefined>((acc, expose) => {
                             if ('features' in expose) {
-                                const found = expose.features.find(expose => expose.property === propertyId)
+                                const found = expose.features.find(expose => expose.propertyId === propertyId)
                                 return found || acc;
                             }
 
-                            return expose.property === propertyId ? expose : acc
+                            return expose.propertyId === propertyId ? expose : acc
                         }, undefined);
                         if (!exposes) return value;
 
-                        if (
-                            exposes.type === "binary" &&
-                            property.dataType === PropertyDataType.boolean
-                        ) {
-                            if (exposes.value_on === value) {
-                                return "true";
-                            } else if (exposes.value_off === value) {
-                                return "false";
-                            }
-                        }
-
-                        return value;
+                        return exposes.translateForPlatform ? exposes.translateForPlatform(value) : value
                     },
                 );
             });
