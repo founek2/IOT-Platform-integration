@@ -1,5 +1,6 @@
-import { Device, assignProperty } from "./convertor.ts";
-import { Platform, ComponentType, Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { DeviceTransformed, TransformedExpose } from "./convertor.ts";
+import { Platform, ComponentType, Logger, Node } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { translate } from "./translate.ts";
 
 interface SpawnConfig {
     userName: string,
@@ -7,7 +8,7 @@ interface SpawnConfig {
     deeplApiKey?: string
 }
 export async function spawnDevices(
-    devices: Device[],
+    devices: DeviceTransformed[],
     publishSetToZigbee: (friendly_name: string, property: string) => (value: string) => void,
     config: SpawnConfig,
     logger: Logger
@@ -62,4 +63,26 @@ export async function spawnDevices(
     }
 
     return platforms
+}
+
+
+export async function assignProperty(
+    expose: TransformedExpose,
+    thing: Node,
+    publishBridge: (value: string) => void,
+    deeplApiKey: string | undefined,
+    log: Logger
+) {
+    const translatedName = await translate(expose.name, deeplApiKey);
+
+    thing.addProperty({
+        ...expose,
+        name: translatedName,
+        callback: (newValue) => {
+            log.debug(`recieved ${expose.dataType}: ${newValue}`);
+            publishBridge(expose.translateForZigbee ? expose.translateForZigbee(newValue) : newValue);
+
+            return Promise.resolve(false);
+        },
+    })
 }
