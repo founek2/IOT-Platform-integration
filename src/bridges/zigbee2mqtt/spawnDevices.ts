@@ -43,7 +43,7 @@ export async function spawnDevices(
                     await assignProperty(
                         property,
                         thing,
-                        publishSetToZigbee(friendly_name, property.name),
+                        publishSetToZigbee(friendly_name, property.propertyId),
                         config.deeplApiKey,
                         logger
                     );
@@ -52,7 +52,7 @@ export async function spawnDevices(
                 await assignProperty(
                     node,
                     thing,
-                    publishSetToZigbee(friendly_name, node.name),
+                    publishSetToZigbee(friendly_name, node.propertyId),
                     config.deeplApiKey,
                     logger
                 );
