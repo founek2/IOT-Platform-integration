@@ -117,7 +117,7 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
                         }, undefined);
                         if (!exposes) return String(value);
 
-                        return exposes.translateForPlatform ? exposes.translateForPlatform(value, data) : String(value)
+                        return exposes.translateForPlatform ? exposes.translateForPlatform(value) : String(value)
                     },
                 );
             });

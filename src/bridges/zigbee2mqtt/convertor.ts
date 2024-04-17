@@ -2,8 +2,10 @@ import { PropertyDataType, PropertyArgs } from "https://raw.githubusercontent.co
 import { DeviceExposesSwitch } from "./zigbeeTypes.ts";
 import { DeviceExposesGeneric } from "./zigbeeTypes.ts";
 import { Device } from "./zigbeeTypes.ts";
+import xyz from "npm:color-space/xyz.js"
+import xyy from "npm:color-space/xyy.js"
 
-export type TransformedExpose = PropertyArgs & { translateForZigbee?: (value: any) => any, translateForPlatform?: (value: any, object?: Record<string, any>) => any }
+export type TransformedExpose = PropertyArgs & { translateForZigbee?: (value: any) => any, translateForPlatform?: (value: any) => any }
 export type TransformedExposes =
   TransformedExpose | { type: string, features: TransformedExpose[] }
 
@@ -57,6 +59,10 @@ function transformAndOverrideProperty(override: DeviceOverride['properties'] = {
       if (transformed.dataType === PropertyDataType.color) {
         transformed.translateForZigbee = (value: string) => {
           return JSON.stringify({ rgb: value })
+        }
+        transformed.translateForPlatform = (color: { x: number, y: number }) => {
+          const rgb = xyz.rgb(xyy.xyz([color.x, color.y, 100])).map((v: number) => Math.round(v))
+          return `${rgb[0]},${rgb[1]},${rgb[2]}`;
         }
       }
     }
