@@ -98,9 +98,7 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
             if (!plat) return;
 
             const data: { [key: string]: string | number | boolean } = JSON.parse(message.toString());
-            Object.entries(data).forEach(([propertyId, valueAny]) => {
-                const value = valueAny.toString();
-
+            Object.entries(data).forEach(([propertyId, value]) => {
                 plat.publishPropertyData(
                     propertyId,
                     (_node, property) => {
@@ -117,9 +115,9 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
 
                             return expose.propertyId === propertyId ? expose : acc
                         }, undefined);
-                        if (!exposes) return value;
+                        if (!exposes) return String(value);
 
-                        return exposes.translateForPlatform ? exposes.translateForPlatform(value) : value
+                        return exposes.translateForPlatform ? exposes.translateForPlatform(value, data) : String(value)
                     },
                 );
             });
@@ -138,10 +136,10 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
     })
 
     function publishSetToZigbee(friendly_name: string, propertyName: string) {
-        return (value: string) =>
+        return (value: boolean | string | number) =>
             zigbeeClient.publish(
                 `zigbee2mqtt/${friendly_name}/set/${propertyName}`,
-                value,
+                String(value),
             );
     }
 

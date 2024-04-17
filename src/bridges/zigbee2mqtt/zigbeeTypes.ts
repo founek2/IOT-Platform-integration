@@ -49,8 +49,8 @@ export interface DeviceExposesBinary {
     label?: string;
     property: string;
     description: string;
-    value_off: string;
-    value_on: string;
+    value_off: string | boolean;
+    value_on: string | boolean;
 }
 
 export interface DeviceExposesComposite {
