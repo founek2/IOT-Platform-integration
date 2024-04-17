@@ -3,7 +3,7 @@ import { DeviceExposesSwitch } from "./zigbeeTypes.ts";
 import { DeviceExposesGeneric } from "./zigbeeTypes.ts";
 import { Device } from "./zigbeeTypes.ts";
 
-export type TransformedExpose = PropertyArgs & { translateForZigbee?: (value: any) => any, translateForPlatform?: (value: any) => any }
+export type TransformedExpose = PropertyArgs & { translateForZigbee?: (value: any) => any, translateForPlatform?: (value: any, object?: Record<string, any>) => any }
 export type TransformedExposes =
   TransformedExpose | { type: string, features: TransformedExpose[] }
 
