@@ -108,16 +108,22 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
     });
 
 
-    // client.on('close', function () {
-    //     console.log('Connection closed');
-    // });
+    function publishStatus(status: DeviceStatus) {
+        if (plat.status !== status)
+            plat.publishStatus(status);
+    }
+
+    let hasBeenEverConnected = false;
     client.on('error', function (err: any) {
+        if (hasBeenEverConnected) {
+            publishStatus(DeviceStatus.alert)
+            return;
+        }
+
         if (err.code === 'ETIMEDOUT') {
-            if (plat.status !== DeviceStatus.alert)
-                plat.publishStatus(DeviceStatus.alert);
+            publishStatus(DeviceStatus.alert)
         } else if (err.code === 'ECONNREFUSED') {
-            if (plat.status !== DeviceStatus.disconnected)
-                plat.publishStatus(DeviceStatus.disconnected);
+            publishStatus(DeviceStatus.disconnected)
         } else
             logger.error(err);
 
@@ -149,6 +155,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
 
     let commandToSend: string | undefined;
     client.on("connect", function () {
+        hasBeenEverConnected = true;
         if (!commandToSend) return;
 
         client.write(commandToSend);
@@ -160,7 +167,6 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         commandToSend = prepareCommand(payload);
         client.connect(device.intexPort, device.intexIp);
     }
-
 
     function sync() {
         sendData(commands.status);
