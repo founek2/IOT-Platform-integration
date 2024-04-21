@@ -148,8 +148,8 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         if (json.errorCode)
             plat.publishStatus(DeviceStatus.alert)
 
-        if (plat.status != DeviceStatus.ready) plat.publishStatus(DeviceStatus.ready);
 
+        publishStatus(DeviceStatus.ready);
         client.end();
     });
 
