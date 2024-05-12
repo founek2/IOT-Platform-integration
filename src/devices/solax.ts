@@ -4,7 +4,7 @@ import fetch from 'npm:node-fetch@3.3.2';
 // import mqtt from 'npm:mqtt@5';
 import { FactoryFn } from '../types.ts';
 
-const MIN_5 = 5 * 60 * 1000; /* ms */
+const MIN_6 = 6 * 60 * 1000; /* ms */
 // const SEC_10 = 10 * 1000; /* ms */
 // const API_TOKEN = Deno.env.get("API_TOKEN");
 // const REGISTRATION_NUMBER = Deno.env.get("REGISTRATION_NUMBER");
@@ -225,7 +225,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
     syncPlatform();
     const syncInterval = setInterval(() => {
         syncPlatform();
-    }, MIN_5);
+    }, MIN_6);
 
     return {
         cleanUp: function () {
