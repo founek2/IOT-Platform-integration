@@ -40,6 +40,7 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
 
     const zigbeeClient = mqtt.connect(bridge.zigbeeMqtt.uri, {
         port: bridge.zigbeeMqtt.port,
+        keepalive: 30,
     });
 
     zigbeeClient.on("connect", function () {
