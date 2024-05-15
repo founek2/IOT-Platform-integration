@@ -49,7 +49,7 @@ export const factory: FactoryFn<WatcherConfig> = function (_config, device, logg
                     cache[cacheKey] = isOnline
 
                     callAllWebhooks(webhooksUp, logger)
-                } else if (!isOnline && cache[cacheKey]) {
+                } else if (!isOnline && (cache[cacheKey] || cache[cacheKey] == undefined)) {
                     cache[cacheKey] = isOnline
 
                     callAllWebhooks(webhooksDown, logger)
