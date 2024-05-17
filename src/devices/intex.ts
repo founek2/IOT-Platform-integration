@@ -168,9 +168,17 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         client.connect(device.intexPort, device.intexIp);
     }
 
+    let counter = 0;
     function sync() {
-        sendData(commands.status);
-        // sendData(commands.info);
+        if (counter < 4) {
+            sendData(commands.status);
+            counter++;
+        } else {
+            // setting temp should force temperature update
+            const tempPreset = tempPresetProperty.getValue();
+            if (tempPreset) sendData(commands.presetTemp(Number(tempPreset)));
+            counter = 0;
+        }
     }
 
     plat.init();
