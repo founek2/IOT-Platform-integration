@@ -80,6 +80,12 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         },
     });
 
+    const errorProperty = nodeLight.addProperty({
+        propertyId: 'error',
+        dataType: PropertyDataType.string,
+        name: 'Chyba',
+    });
+
     const nodeSwitch = plat.addNode('sensor', 'Výřivka teplota', ComponentType.sensor);
     const tempCurrentProperty = nodeSwitch.addProperty({
         propertyId: 'tempCurrent',
@@ -145,11 +151,15 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         electrolysisProperty.setValue(json.sanitizer.toString())
         if (json.currentTemp) tempCurrentProperty.setValue(json.currentTemp.toString())
         tempPresetProperty.setValue(json.presetTemp.toString())
-        if (json.errorCode)
+
+        if (json.errorCode) {
             plat.publishStatus(DeviceStatus.alert)
+            errorProperty.setValue(json.errorCode)
+        }
+        else {
+            publishStatus(DeviceStatus.ready);
+        }
 
-
-        publishStatus(DeviceStatus.ready);
         client.end();
     });
 
