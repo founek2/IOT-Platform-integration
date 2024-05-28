@@ -158,6 +158,9 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
         }
         else {
             publishStatus(DeviceStatus.ready);
+            if (errorProperty.getValue()) {
+                errorProperty.setValue("")
+            }
         }
 
         client.end();
