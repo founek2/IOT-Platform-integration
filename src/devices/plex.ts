@@ -15,7 +15,7 @@ export const Schema = SchemaValidator({
 
 type BraviaConfig = Type<typeof Schema>;
 
-export const factory: FactoryFn<BraviaConfig> = function (config, device, logger) {
+export const factory: FactoryFn<BraviaConfig> = function (config, device, logger, storage) {
     const url = new URL(device.plexUri);
     const authenticator = plexPinAuth();
     const plexClient = new PlexAPI({
@@ -31,7 +31,7 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
         }
     });
 
-    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
     const nodeLight = plat.addNode('player', 'Přehrávač', ComponentType.switch);
     const powerProperty = nodeLight.addProperty({

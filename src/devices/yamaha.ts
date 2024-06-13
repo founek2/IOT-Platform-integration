@@ -10,13 +10,13 @@ export const Schema = SchemaValidator({
 
 type YamahaConfig = Type<typeof Schema>;
 
-export const factory: FactoryFn<YamahaConfig> = function (config, device, logger) {
+export const factory: FactoryFn<YamahaConfig> = function (config, device, logger, storage) {
     if (device.yamahaEventPort)
         logger.info("Enabling events subscription")
 
     const yamaha = new YamahaClient(device.yamahaIp, device.yamahaEventPort);
 
-    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
     const reciever = plat.addNode('reciever', 'Reciever', ComponentType.switch);
     const recieverPower = reciever.addProperty({

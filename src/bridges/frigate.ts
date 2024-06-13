@@ -16,7 +16,7 @@ export const Schema = SchemaValidator({
 
 type FrigateConfig = Type<typeof Schema>;
 
-export const factory: FactoryFn<FrigateConfig> = async function (config, bridge, logger) {
+export const factory: FactoryFn<FrigateConfig> = async function (config, bridge, logger, storage) {
     const cams: Record<string, Property> = {};
 
     const HOST = bridge.frigateUrl;
@@ -28,7 +28,7 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
     const frigateConfig = await frigateConfigRes.json() as FrigateRemoteConfig
     const cameras = frigateConfig.cameras;
 
-    const plat = new Platform(bridge.id, config.userName, bridge.name, config.mqtt.uri, config.mqtt.port);
+    const plat = new Platform(bridge.id, config.userName, bridge.name, config.mqtt.uri, config.mqtt.port, storage);
     for (const [name, _camera] of Object.entries(cameras)) {
         const node = plat.addNode(name, name, ComponentType.generic);
 

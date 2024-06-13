@@ -1,6 +1,7 @@
 import { DeviceTransformed, TransformedExpose } from "./convertor.ts";
 import { Platform, ComponentType, Logger, Node } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { translate } from "./translate.ts";
+import { ILocalStorage } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/storage.ts";
 
 interface SpawnConfig {
     userName: string,
@@ -11,7 +12,8 @@ export async function spawnDevices(
     devices: DeviceTransformed[],
     publishSetToZigbee: (friendly_name: string, property: string) => (value: string) => void,
     config: SpawnConfig,
-    logger: Logger
+    logger: Logger,
+    storage: ILocalStorage
 ) {
     const platforms: Platform[] = []
 
@@ -28,6 +30,7 @@ export async function spawnDevices(
             friendly_name,
             config.mqtt.uri,
             config.mqtt.port,
+            storage,
         );
         platforms.push(plat);
 

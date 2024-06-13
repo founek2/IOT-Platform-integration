@@ -1,4 +1,4 @@
-import { Device } from "./convertor.ts";
+import { Device } from "./zigbeeTypes.ts";
 
 export function filterByWhitelist(whitelist: Array<string>) {
     return function (device: Device): boolean {

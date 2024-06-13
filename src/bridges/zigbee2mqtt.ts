@@ -33,7 +33,7 @@ export const Schema = SchemaValidator({
 
 type Zigbee2MqttConfig = Type<typeof Schema>;
 
-export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, logger) {
+export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, logger, storage) {
     let instances: Platform[] = [];
     let globalData: { devices: DeviceTransformed[], fingerprint: string } = { devices: [], fingerprint: "" };
     const availabilityCache: Record<string, DeviceStatus | undefined> = {};
@@ -82,7 +82,7 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
 
             logger.debug("Refreshing devices");
             await shutdownDevices(instances);
-            instances = await spawnDevices(globalData.devices, publishSetToZigbee, { ...config, deeplApiKey: bridge.deeplApiKey }, logger);
+            instances = await spawnDevices(globalData.devices, publishSetToZigbee, { ...config, deeplApiKey: bridge.deeplApiKey }, logger, storage);
 
             // Backfill last known availability from cache
             Object.entries(availabilityCache).forEach(([friendly_name, status]) => {
