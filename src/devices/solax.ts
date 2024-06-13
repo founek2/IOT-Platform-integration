@@ -1,7 +1,6 @@
 import SchemaValidator, { Type, string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import fetch from 'npm:node-fetch@3.3.2';
-// import mqtt from 'npm:mqtt@5';
 import { FactoryFn } from '../types.ts';
 
 const MIN_6 = 6 * 60 * 1000; /* ms */
@@ -22,7 +21,7 @@ export const Schema = SchemaValidator({
 type IntexConfig = Type<typeof Schema>;
 
 
-export const factory: FactoryFn<IntexConfig> = function (config, device, logger) {
+export const factory: FactoryFn<IntexConfig> = function (config, device, logger, storage) {
     // const client = mqtt.connect('mqtt://mqtt002.solaxcloud.com', {
     //     username: device.solaxRegistrationNumber,
     //     password: device.solaxMqttPassword,
@@ -94,7 +93,7 @@ export const factory: FactoryFn<IntexConfig> = function (config, device, logger)
             });
     }
 
-    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
     const nodeLight = plat.addNode('invertor', 'Střídač', ComponentType.sensor);
     const nodeBattery = plat.addNode('battery', 'Baterie', ComponentType.sensor);

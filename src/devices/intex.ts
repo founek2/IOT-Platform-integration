@@ -13,11 +13,10 @@ export const Schema = SchemaValidator({
 type IntexConfig = Type<typeof Schema>;
 
 
-export const factory: FactoryFn<IntexConfig> = function (config, device, logger) {
+export const factory: FactoryFn<IntexConfig> = function (config, device, logger, storage) {
     const client = new Socket();
 
-    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
-
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
     const nodeLight = plat.addNode('control', 'Vířivka', ComponentType.switch);
 

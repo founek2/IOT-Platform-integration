@@ -1,5 +1,6 @@
 import { Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import SchemaValidator, { Type, string, number, unknown } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import { ILocalStorage } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/storage.ts";
 
 export enum ModuleType {
     devices = "devices",
@@ -50,7 +51,7 @@ export type FactoryReturn = {
     cleanUp: () => void | Promise<void>
     healthCheck: () => HealthCheck | HealthCheck[]
 };
-export type FactoryFn<T = Record<string | number, string | number>> = (config: DeviceConfig, device: Device<Device<T>>, log: Logger) => FactoryReturn | Promise<FactoryReturn>;
+export type FactoryFn<T = Record<string | number, string | number>> = (config: DeviceConfig, device: Device<Device<T>>, log: Logger, storage: ILocalStorage) => FactoryReturn | Promise<FactoryReturn>;
 export interface Module {
     factory: FactoryFn
     Schema?: {

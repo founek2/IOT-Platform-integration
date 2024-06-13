@@ -18,7 +18,7 @@ export const Schema = SchemaValidator({
 
 type BraviaConfig = Type<typeof Schema>;
 
-export const factory: FactoryFn<BraviaConfig> = function (config, device, logger) {
+export const factory: FactoryFn<BraviaConfig> = function (config, device, logger, storage) {
     const bravia = new BraviaClient(device.braviaIp, device.braviaPsk);
 
     // bravia.audio.getMethodTypes()
@@ -27,7 +27,7 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
 
 
 
-    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
     function handleAction(cb: CallbackFn) {
         const fn: CallbackFn = async (newValue): Promise<boolean | void> => {

@@ -1,6 +1,6 @@
-import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { Platform, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number, array } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, array } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 
 const ActionSchema = SchemaValidator({
     mqttTopic: string,
@@ -18,8 +18,8 @@ export const Schema = SchemaValidator({
 
 type BraviaConfig = Type<typeof Schema>;
 
-export const factory: FactoryFn<BraviaConfig> = function (config, device, logger) {
-    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
+export const factory: FactoryFn<BraviaConfig> = function (config, device, logger, storage) {
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
     const nodeLight = plat.addNode('sms', 'Sms', ComponentType.sensor);
     const smsSendProperty = nodeLight.addProperty({

@@ -5,6 +5,7 @@ import { Config, Module, SchemaGeneral, ConfigDevice, FactoryReturn, ModuleType 
 import SchemaValidator, { string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { Logger, logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { startHealthcheckServer } from "./server.ts";
+import { LocalStorage } from "./localstorage.ts";
 
 const modules: Record<ModuleType, Record<string, Module>> = {
     [ModuleType.devices]: {},
@@ -75,6 +76,8 @@ const SchemaDevice = SchemaValidator({
     type: string.regexp(new RegExp(`^(${loadedModuleNames.join("|")})$`)).error(`Expect type to be one of ${loadedModuleNames.join(", ")}`),
 })
 
+const localstorage = new LocalStorage(Deno.env.get("STORAGE_PATH") || "local-storage")
+
 function constructDevice(id: string, device: ConfigDevice, module: Module) {
     const data = { id, ...device };
 
@@ -97,7 +100,7 @@ function constructDevice(id: string, device: ConfigDevice, module: Module) {
     return module.factory({
         userName: config.userName,
         mqtt: config.mqtt,
-    }, data, log)
+    }, data, log, localstorage)
 }
 
 const devices: Record<ModuleType, FactoryReturn[]> = {
