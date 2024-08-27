@@ -1,4 +1,4 @@
-FROM denoland/deno
+FROM denoland/deno:1.45.5
 
 ENV PATH="${PATH}:/root/.local/bin"
 
