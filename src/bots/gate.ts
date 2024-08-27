@@ -6,8 +6,8 @@ function generateNextChangeTimeout() {
     return Math.floor(Math.random() * 6 * ONE_HOUR + ONE_HOUR);
 }
 
-export const factory: FactoryFn = function (config, device, _logger) {
-    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
+export const factory: FactoryFn = function (config, device, _logger, storage) {
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
     const nodeLight = plat.addNode('gate', 'Brána', ComponentType.activator);
     const gateProperty = nodeLight.addProperty({

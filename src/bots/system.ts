@@ -2,8 +2,8 @@ import * as si from 'npm:systeminformation';
 import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { FactoryFn } from '../types.ts';
 
-export const factory: FactoryFn = function (config, device, _logger) {
-    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port);
+export const factory: FactoryFn = function (config, device, _logger, storage) {
+    const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
     const nodeLight = plat.addNode('load', 'Systém', ComponentType.sensor);
 
