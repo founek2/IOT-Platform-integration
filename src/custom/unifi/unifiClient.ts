@@ -19,16 +19,17 @@ export class UnifiClient {
     }
 
     async login() {
-        const res = await this.fetch(this.baseUrl + "/api/login", {
+        const res = await this.fetch(this.baseUrl + "/api/auth/login", {
             headers: {
-                referer: this.baseUrl + "/login",
+                referer: this.baseUrl + "/auth/login",
                 "content-type": "application/json",
 
             },
             method: "POST",
             body: JSON.stringify({
                 username: this.user,
-                password: this.password
+                password: this.password,
+                rememberMe: true
             })
         })
         if (!res.ok) throw new Error("Failed to login")
@@ -36,7 +37,7 @@ export class UnifiClient {
 
     async listActiveDevices() {
         const token = this.cookieJar.getCookie({ name: "csrf_token" });
-        const res = await this.fetch(this.baseUrl + "/v2/api/site/default/clients/active", {
+        const res = await this.fetch(this.baseUrl + "/proxy/network/v2/api/site/default/clients/active", {
             method: "GET",
             headers: {
                 referer: "https://192.168.10.217:8444/manage/default/clients",
