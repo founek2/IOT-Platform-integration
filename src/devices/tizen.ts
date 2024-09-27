@@ -24,12 +24,15 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
         debug: false, // Default: false
         ip: device.tizenIp,
         mac: device.tizenMac,
-        nameApp: 'IoTDomu', // Default: NodeJS
+        nameApp: device.id, // Default: NodeJS
         port: 8002, // Default: 8002
         token: device.tizenToken,
     }
 
     const control = new Samsung(configTizen)
+    control.on('token', (token: string) => {
+        logger.warning(`Token has changed, new value is '${token}' - update it in config file!!!`)
+    })
 
     // bravia.audio.getMethodTypes()
     //     .then((info: any) => console.log(info))
