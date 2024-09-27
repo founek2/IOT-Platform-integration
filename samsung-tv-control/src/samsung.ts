@@ -86,52 +86,6 @@ class Samsung extends EventEmitter {
     this.connect();
   }
 
-  public getToken(done: (token: string | null) => void) {
-    this.LOGGER.log('getToken', '')
-
-    if (this.SAVE_TOKEN && this.TOKEN !== 'null' && this.TOKEN !== '') {
-      done(this.TOKEN)
-      return
-    }
-
-    this.sendKey(KEYS.KEY_HOME, (err, res) => {
-      if (err) {
-        this.LOGGER.error('after sendKey', err, 'getToken')
-        throw new Error('Error send Key')
-      }
-
-      const token = (res && typeof res !== 'string' && res.data && res.data.token && res.data.token) || null
-
-      if (token !== null) {
-        const sToken = String(token)
-        this.LOGGER.log('got token', sToken, 'getToken')
-        this.TOKEN = sToken
-        this.WS_URL = this._getWSUrl()
-
-        if (this.SAVE_TOKEN) {
-          this._saveTokenToFile(sToken)
-        }
-
-        done(sToken)
-        return
-      }
-
-      done(null)
-    })
-  }
-
-  public getTokenPromise(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      this.getToken((token) => {
-        if (token) {
-          resolve(token)
-        } else {
-          reject(new Error('Did not receive token from Samsung TV'))
-        }
-      })
-    })
-  }
-
   public setToken(token: string) {
     this.TOKEN = token
     this.WS_URL = this._getWSUrl()
@@ -406,6 +360,7 @@ class Samsung extends EventEmitter {
               this._saveTokenToFile(sToken)
             }
 
+            this.emit('token', token)
             connection.close();
           }
         }
