@@ -33,6 +33,8 @@ Exposing of all devices.
   - turn on/off
   - display custom html website
   - change volume
+- Samsung TV (Tizen)
+  - turn on/off
 - Intex whirlpool - integrated via TCP connection to ESP display
   - current and target temperate
   - control: heating, bubbles, nozzles, filtration
