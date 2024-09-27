@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import * as net from 'node:net'
 import * as path from 'node:path'
 import * as request from 'npm:request'
-import * as wol from 'npm:wake_on_lan'
+import { wakeOnLAN } from "./wol.ts"
 // @deno-types="npm:@types/websocket"
 import { client as WebSocket, connection } from 'npm:websocket'
 import { KEYS } from './keys.ts'
@@ -67,7 +67,7 @@ class Samsung extends EventEmitter {
     }
     this.WS_URL = this._getWSUrl()
 
-    this.ws = new WebSocket({ tlsOptions: { rejectUnauthorized: false } });
+    this.ws = new WebSocket({ tlsOptions: { rejectUnauthorized: false, timeout: 5000 } });
 
     this.LOGGER.log(
       'internal config',
@@ -291,18 +291,15 @@ class Samsung extends EventEmitter {
     })
   }
 
-  public turnOn(): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      wol.wake(this.MAC, { num_packets: 30 }, (err: Error) => {
-        if (err) {
-          this.LOGGER.error('Fail turn on', err, 'turnOn')
-          reject(err)
-        } else {
-          this.LOGGER.log('WOL sent command to TV', '', 'turnOn')
-          resolve(true)
-        }
-      })
-    })
+  public async turnOn(): Promise<boolean> {
+    try {
+      await wakeOnLAN(this.MAC);
+      this.LOGGER.log('WOL sent command to TV', '', 'turnOn')
+      return true;
+    } catch (err) {
+      this.LOGGER.error('Fail turn on', err, 'turnOn')
+      return false;
+    }
   }
 
   public getLogs() {
@@ -328,8 +325,6 @@ class Samsung extends EventEmitter {
   }
 
   private connect() {
-    this.reconnect();
-
     this.ws.on('connect', (connection) => {
       this.LOGGER.log('connected', 'ws.on connect');
       this.connection = connection;
@@ -369,7 +364,7 @@ class Samsung extends EventEmitter {
       connection.on('close', () => {
         this.emit('close')
         this.LOGGER.log('', '', 'ws.on close');
-        setTimeout(() => this.reconnect(), 1000);
+        // setTimeout(() => this.reconnect(), 3000);
       })
 
       connection.on('error', (err) => {
@@ -381,6 +376,13 @@ class Samsung extends EventEmitter {
         this.LOGGER.error(errorMsg, err, 'ws.on error')
       })
     })
+
+    this.ws.on('connectFailed', () => {
+      this.emit('close')
+      setTimeout(() => this.reconnect(), 5_000);
+    })
+
+    this.reconnect();
   }
 
   private _send(
