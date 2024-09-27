@@ -61,12 +61,11 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
     const nodeLight = plat.addNode('television', 'Televize', ComponentType.switch);
     const powerProperty = nodeLight.addProperty({
         propertyId: 'power',
-        dataType: PropertyDataType.enum,
-        format: 'on',
+        dataType: PropertyDataType.boolean,
         name: 'TV',
         settable: true,
         callback: handleAction(async (newValue) => {
-            if (newValue === 'true') await control.sendKeyPromise(KEYS.KEY_POWER);
+            if (newValue === 'true') await control.turnOn();
             else await control.sendKeyPromise(KEYS.KEY_POWER);
             return true;
         }),
@@ -126,15 +125,16 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
 
     // async function syncPlatform() {
     try {
-        // await bravia.sync();
-
         control.on('connect', () => {
-            plat.publishStatus(DeviceStatus.ready);
-        })
-
+            console.log("connect")
+            if (powerProperty.getValue() != "true") powerProperty.setValue('true');
+        });
         control.on('close', () => {
-            plat.publishStatus(DeviceStatus.disconnected);
-        })
+            console.log("close")
+            if (powerProperty.getValue() != "false") powerProperty.setValue('false');
+        });
+
+
 
         // powerProperty.setValue(bravia.getPowerStatus() == 'active' ? 'true' : 'false');
 
