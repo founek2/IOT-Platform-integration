@@ -276,7 +276,9 @@ class Samsung extends EventEmitter {
 
   public async turnOn(): Promise<boolean> {
     try {
-      await wakeOnLAN(this.MAC, { num_packets: 30 });
+      // Broadcast to 255.255.255.255 is not possible when running inside docker -> broadcast to local IP range
+      const [a, b, c, d] = this.IP.split('.')
+      await wakeOnLAN(this.MAC, { num_packets: 20, address: `${a}.${b}.${c}.255` });
       this.LOGGER.log('WOL sent command to TV', '', 'turnOn')
       return true;
     } catch (err) {
