@@ -46,6 +46,15 @@ Exposing of all devices.
   - change volume
 - sms
 
+## Docker installation
+
+Docker compose mapping:
+
+```yaml
+# Required for UDP sockets to work properly - used for Yamaha, Tizen
+network_mode: host
+```
+
 ## Examples
 
 <img src="./_media/screenshots/camera_dialog.png" alt="Dialog" width="400"/>

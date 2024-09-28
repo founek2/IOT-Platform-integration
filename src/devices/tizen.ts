@@ -52,7 +52,7 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
         return fn;
     }
 
-    function waitForAvailable(): Promise<boolean> {
+    function waitForAvailable(timeout: number = 5_000): Promise<boolean> {
         return new Promise((resolve) => {
             const interval = setInterval(async () => {
                 if (await control.isAvailablePing()) {
@@ -63,7 +63,7 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
             setTimeout(() => {
                 clearInterval(interval)
                 resolve(false)
-            }, 5_000);
+            }, timeout);
         })
 
     }
