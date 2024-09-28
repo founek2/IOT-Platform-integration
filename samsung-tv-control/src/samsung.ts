@@ -251,29 +251,12 @@ class Samsung extends EventEmitter {
   }
 
   public isAvailable(): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      request.get(
-        { url: `http://${this.IP}:8001${this.PORT === 55000 ? '/ms/1.0/' : '/api/v2/'}`, timeout: 3000 },
-        (err: Error, res: request.RequestResponse) => {
-          if (err) {
-            return reject(err)
-          }
-
-          if (!err && res.statusCode === 200) {
-            this.LOGGER.log(
-              'TV is available',
-              { body: res.body as string, code: res.statusCode },
-              'isAvailable',
-            )
-
-            resolve(true)
-          } else {
-            this.LOGGER.error('TV is not available', { err }, 'isAvailable')
-            resolve(false)
-          }
-        },
-      )
-    })
+    return fetch(`http://${this.IP}:8001${this.PORT === 55000 ? '/ms/1.0/' : '/api/v2/'}`, {
+      signal: AbortSignal.timeout(5000)
+    }).then(res => res.ok).catch((err) => {
+      this.LOGGER.error('TV is not available', { err }, 'isAvailable')
+      return false;
+    });
   }
 
   public isAvailablePing(): Promise<boolean> {
