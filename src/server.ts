@@ -20,5 +20,5 @@ export async function startHealthcheckServer(instances: FactoryReturn[]) {
         },
     );
 
-    await server.listen({ port: 8080 });
+    await server.listen({ port: Number(Deno.env.get('PORT') || '8080') });
 }
