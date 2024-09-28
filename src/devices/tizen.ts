@@ -1,6 +1,6 @@
 import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number, array } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { CallbackFn } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/property.ts";
 import { Samsung } from '../../samsung-tv-control/src/index.ts'
 import KEYS from "../../samsung-tv-control/src/keys.ts";
@@ -33,12 +33,6 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
     control.on('token', (token: string) => {
         logger.warning(`Token has changed, new value is '${token}' - update it in config file!!!`)
     })
-
-    // bravia.audio.getMethodTypes()
-    //     .then((info: any) => console.log(info))
-    //     .catch((error: any) => console.error(error));
-
-
 
     const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
@@ -156,26 +150,3 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
         }
     };
 }
-
-
-// async function main() {
-//   console.log(await getVolume());
-//   console.log(await getPowerStatus());
-//   console.log(setPowerStatus(true));
-//   console.log(await bravia.system.invoke('getPowerSavingMode'));
-// }
-// setPowerStatus(false);
-// main();
-
-// bravia.system
-//   .getMethodTypes()
-//   .then((methods) => console.log(...methods.map((m) => m.methods)))
-//   .catch((error) => console.error(error));
-
-// Retrieves all the available IRCC commands from the TV.
-// bravia.system
-//   .invoke('getRemoteControllerInfo')
-//   .then((commands) => console.log(commands))
-//   .catch((error) => console.error(error));
-
-// Queries the volume info.

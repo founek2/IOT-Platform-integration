@@ -44,6 +44,8 @@ const wakeOnLAN = async (mac: string, opts: { address?: string, num_packets?: nu
         socket.send(magic_packet, peerAddr);
         await sleep(interval);
     }
+
+    socket.close()
 };
 
 export { wakeOnLAN, createMagicPacket };
