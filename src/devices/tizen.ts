@@ -123,39 +123,29 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
 
     plat.init();
 
-    // async function syncPlatform() {
-    try {
-        control.on('connect', () => {
-            console.log("connect")
+    control.on('connect', () => {
+        if (powerProperty.getValue() != "true") powerProperty.setValue('true');
+    });
+    control.on('close', () => {
+        if (powerProperty.getValue() != "false") powerProperty.setValue('false');
+    });
+
+    async function syncStatus() {
+        const isOn = await control.isAvailablePing()
+        if (isOn) {
             if (powerProperty.getValue() != "true") powerProperty.setValue('true');
-        });
-        control.on('close', () => {
-            console.log("close")
+        }
+        else {
             if (powerProperty.getValue() != "false") powerProperty.setValue('false');
-        });
-
-
-
-        // powerProperty.setValue(bravia.getPowerStatus() == 'active' ? 'true' : 'false');
-
-        // if (bravia.getPowerStatus() === "active") {
-        //     const volume = bravia.getVolume()?.toString()
-        //     if (volume) volumeProperty.setValue(volume);
-        //     muteProperty.setValue(bravia.isMuted().toString())
-        // }
-    } catch (e: any) {
-        if (e.code === 'EHOSTUNREACH' || e.code === 'ETIMEDOUT') {
-            plat.publishStatus(DeviceStatus.alert);
-        } else logger.error(e);
+        }
     }
-    // }
 
-    // syncPlatform();
-    // const syncInterval = setInterval(syncPlatform, 3 * 60 * 1000);
+    syncStatus();
+    const syncInterval = setInterval(syncStatus, 3 * 60 * 1000);
 
     return {
         cleanUp: function () {
-            // clearInterval(syncInterval)
+            clearInterval(syncInterval)
             plat.disconnect()
         },
         healthCheck: function () {
