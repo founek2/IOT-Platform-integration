@@ -52,6 +52,22 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
         return fn;
     }
 
+    function waitForAvailable(): Promise<boolean> {
+        return new Promise((resolve) => {
+            const interval = setInterval(async () => {
+                if (await control.isAvailablePing()) {
+                    clearInterval(interval);
+                    resolve(true);
+                }
+            }, 1000)
+            setTimeout(() => {
+                clearInterval(interval)
+                resolve(false)
+            }, 5_000);
+        })
+
+    }
+
     const nodeLight = plat.addNode('television', 'Televize', ComponentType.switch);
     const powerProperty = nodeLight.addProperty({
         propertyId: 'power',
@@ -59,8 +75,14 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
         name: 'TV',
         settable: true,
         callback: handleAction(async (newValue) => {
-            if (newValue === 'true') await control.turnOn();
-            else await control.sendKeyPromise(KEYS.KEY_POWER);
+            if (newValue === 'true') {
+                await control.turnOn()
+                if (await waitForAvailable()) {
+                    return true
+                } else return false
+            } else {
+                await control.sendKeyPromise(KEYS.KEY_POWER);
+            }
             return true;
         }),
     });
