@@ -276,7 +276,7 @@ class Samsung extends EventEmitter {
 
   public async turnOn(): Promise<boolean> {
     try {
-      await wakeOnLAN(this.MAC);
+      await wakeOnLAN(this.MAC, { num_packets: 30 });
       this.LOGGER.log('WOL sent command to TV', '', 'turnOn')
       return true;
     } catch (err) {
