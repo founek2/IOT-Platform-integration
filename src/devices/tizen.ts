@@ -143,9 +143,11 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
     plat.init();
 
     control.on('connect', () => {
+        logger.debug('connected')
         if (powerProperty.getValue() != "true") powerProperty.setValue('true');
     });
     control.on('close', () => {
+        logger.debug('disconnected')
         if (powerProperty.getValue() != "false") powerProperty.setValue('false');
     });
 
