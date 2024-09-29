@@ -2,7 +2,8 @@ FROM denoland/deno:1.46.3
 
 ENV PATH="${PATH}:/root/.local/bin"
 
-RUN apt update && apt install -y pipx && apt clean && pipx install catt
+# Ping is required for tizen
+RUN apt update && apt install -y pipx inetutils-ping && apt clean && pipx install catt
 
 WORKDIR /app
 
