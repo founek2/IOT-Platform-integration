@@ -19,6 +19,9 @@ export const Schema = SchemaValidator({
 
 type TizenConfig = Type<typeof Schema>;
 
+// Working keys - KEY_VOLUP, KEY_VOLDOWN
+// no Idea how to get current state -> even HA implementation is missing it, as well as app controll - not available in new Tizen version
+
 export const factory: FactoryFn<TizenConfig> = function (config, device, logger, storage) {
     const configTizen = {
         debug: false, // Default: false

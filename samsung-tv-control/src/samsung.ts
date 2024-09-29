@@ -299,6 +299,7 @@ class Samsung extends EventEmitter {
   }
 
   private reconnect() {
+    if (this.connection?.state == 'open') return;
     this.LOGGER.log('connecting to ' + this.WS_URL, '');
     this.ws.connect(this.WS_URL);
   }
@@ -349,7 +350,7 @@ class Samsung extends EventEmitter {
       connection.on('close', () => {
         this.emit('close')
         this.LOGGER.log('', '', 'ws.on close');
-        // setTimeout(() => this.reconnect(), 3000);
+        setTimeout(() => this.reconnect(), 3000);
       })
 
       connection.on('error', (err) => {
