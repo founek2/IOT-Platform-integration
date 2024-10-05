@@ -27,18 +27,18 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
     const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
     const nodeLight = plat.addNode('printer', '3D tiskárna', ComponentType.sensor);
-    const progressProperty = nodeLight.addProperty({
-        propertyId: 'progress',
-        dataType: PropertyDataType.float,
-        name: 'Vytisknuto',
-        unitOfMeasurement: '%',
-    });
-
     const timeProperty = nodeLight.addProperty({
         propertyId: 'timeRemaining',
         dataType: PropertyDataType.integer,
         name: 'Zbývá',
         unitOfMeasurement: 'min',
+    });
+
+    const progressProperty = nodeLight.addProperty({
+        propertyId: 'progress',
+        dataType: PropertyDataType.float,
+        name: 'Vytisknuto',
+        unitOfMeasurement: '%',
     });
 
     const timePrintingProperty = nodeLight.addProperty({
@@ -75,6 +75,8 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
                 progressProperty.setValue(job.progress.toString())
                 timeProperty.setValue((job.timeRemaining / 60).toFixed(0).toString())
                 timePrintingProperty.setValue((job.timePrinting / 60).toFixed(0).toString())
+            } else {
+                timeProperty.setValue('')
             }
             if (printer) {
                 stateProperty.setValue(stateToText[printer.state])
