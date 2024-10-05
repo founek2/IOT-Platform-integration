@@ -1,6 +1,6 @@
 # IOT-Platform-integration
 
-Repository contains bridges, integrations and bots written in Deno for [IoT Platform](github.com/founek2/IOT-Platform). It is used to integrate other HW devices which do not support direct connection thus allowing to connect ideally all of your devices to a single platform.
+Repository contains bridges, integrations and bots written in Deno for [IoT Platform](https://github.com/founek2/IOT-Platform). It is used to integrate other HW devices which do not support direct connection thus allowing to connect ideally all of your devices to a single platform.
 
 IoT Platform currently does not support any kinds of plugins, so integrations is done via this project - it emulates every device acting as a bridge for communication.
 
