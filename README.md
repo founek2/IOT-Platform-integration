@@ -44,6 +44,7 @@ Exposing of all devices.
   - turn on/off
   - change input
   - change volume
+- Prusa 3D printer
 - sms
 
 ## Docker installation
