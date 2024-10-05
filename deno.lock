@@ -2,6 +2,7 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "npm:@jamesgopsill/prusa-link": "npm:@jamesgopsill/prusa-link@0.1.2",
       "npm:@types/node": "npm:@types/node@18.16.19",
       "npm:bravia@^1.3.3": "npm:bravia@1.3.3",
       "npm:color-space": "npm:color-space@2.0.1",
@@ -26,6 +27,10 @@
         "dependencies": {
           "regenerator-runtime": "regenerator-runtime@0.14.1"
         }
+      },
+      "@jamesgopsill/prusa-link@0.1.2": {
+        "integrity": "sha512-niZjuNpav4dvOJaZ2zgu5xGEPjeD5kzWGOBDhP6TsBP4zjwj2UxdPoI347h3RDPtQPoqtCt0zLLMjm5xP0xUCA==",
+        "dependencies": {}
       },
       "@types/node@18.16.19": {
         "integrity": "sha512-IXl7o+R9iti9eBW4Wg2hx1xQDig183jj7YLn8F7udNceyfkbn1ZxmzZXuak20gR40D7pIkIY1kYGx5VIGbaHKA==",
