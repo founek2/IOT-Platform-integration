@@ -67,6 +67,10 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
     async function syncPlatform() {
         try {
             const status = await link.status.get();
+            if (status.ok == false) {
+                if (plat.status != DeviceStatus.disconnected) plat.publishStatus(DeviceStatus.disconnected);
+                return;
+            }
 
             const printer = status.content?.printer;
             const job = status.content?.job;
