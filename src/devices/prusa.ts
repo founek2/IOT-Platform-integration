@@ -78,7 +78,12 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
                 if (timeProperty.getValue() != '') timeProperty.setValue('');
             }
             if (printer) {
+                if (printer.state == 'FINISHED') {
+                    if (progressProperty.getValue() != '100') progressProperty.setValue('100');
+                    if (timeProperty.getValue() != '0') timeProperty.setValue('0');
+                }
                 stateProperty.setValue(stateToText[printer.state])
+
                 if (printer.tempNozzle) tempProperty.setValue(printer.tempNozzle.toString())
             }
 
