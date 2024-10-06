@@ -67,7 +67,6 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
     async function syncPlatform() {
         try {
             const status = await link.status.get();
-            if (!status.ok) plat.publishStatus(DeviceStatus.alert);
 
             const printer = status.content?.printer;
             const job = status.content?.job;
@@ -76,7 +75,7 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
                 timeProperty.setValue((job.timeRemaining / 60).toFixed(0).toString())
                 timePrintingProperty.setValue((job.timePrinting / 60).toFixed(0).toString())
             } else {
-                timeProperty.setValue('')
+                if (timeProperty.getValue() != '') timeProperty.setValue('');
             }
             if (printer) {
                 stateProperty.setValue(stateToText[printer.state])
