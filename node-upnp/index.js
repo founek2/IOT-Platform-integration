@@ -252,7 +252,7 @@ export class UPnPClient {
     // Stop retrying if subscription no longer exists
     if (!this.subscriptions[serviceId]) return;
     try {
-      this.renewSubscription({ url, sid, serviceId });
+      await this.renewSubscription({ url, sid, serviceId });
     } catch (e) {
       console.warn(`Error on renewal: ${e}. Retrying in 5 seconds...`);
       const timer = setTimeout(this.retrySubscriptionUntilSuccess.bind(this, { url, sid, serviceId }), 5000);
