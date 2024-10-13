@@ -35,6 +35,8 @@ Exposing of all devices.
   - change volume
 - Samsung TV (Tizen)
   - turn on/off
+  - get/set volume
+  - get/set mute
 - Intex whirlpool - integrated via TCP connection to ESP display
   - current and target temperate
   - control: heating, bubbles, nozzles, filtration
@@ -52,7 +54,7 @@ Exposing of all devices.
 Docker compose mapping:
 
 ```yaml
-# Required for UDP sockets to work properly - used for Yamaha, Tizen
+# Required for UDP/ICMP sockets to work properly - used for Yamaha, Tizen
 network_mode: host
 ```
 
@@ -66,8 +68,8 @@ network_mode: host
 
 > Image shows integration for Zigbee water valve <https://www.zigbee2mqtt.io/devices/QT06_1.html>
 
-Solax inverter             |  Solax baterry
-:-------------------------:|:-------------------------:
-<img src="./_media/screenshots/solax_dialog.png" alt="Solax inverter" width="400"/> |  <img src="./_media/screenshots/solax_baterry_dialog.png" alt="Solax inverter" width="400"/>
+|                                   Solax inverter                                    |                                        Solax baterry                                        |
+| :---------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------: |
+| <img src="./_media/screenshots/solax_dialog.png" alt="Solax inverter" width="400"/> | <img src="./_media/screenshots/solax_baterry_dialog.png" alt="Solax inverter" width="400"/> |
 
 > Integration for Solax X3
