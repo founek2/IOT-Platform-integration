@@ -1,9 +1,10 @@
 import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, number } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { CallbackFn } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/property.ts";
 import { Samsung } from '../../samsung-tv-control/src/index.ts'
 import KEYS from "../../samsung-tv-control/src/keys.ts";
+import UPnPClient from '../../node-upnp/index.js'
 
 // const ActionSchema = SchemaValidator({
 //     name: string,
@@ -14,6 +15,7 @@ export const Schema = SchemaValidator({
     tizenIp: string,
     tizenMac: string,
     tizenToken: string.optional(),
+    tizenUpnpPort: number.optional(8081),
     //braviaActions: array.of(ActionSchema).optional()
 })
 
@@ -21,6 +23,7 @@ type TizenConfig = Type<typeof Schema>;
 
 // Working keys - KEY_VOLUP, KEY_VOLDOWN
 // no Idea how to get current state -> even HA implementation is missing it, as well as app controll - not available in new Tizen version
+const SVC_RENDERINGCONTROL = "urn:upnp-org:serviceId:RenderingControl"
 
 export const factory: FactoryFn<TizenConfig> = function (config, device, logger, storage) {
     const configTizen = {
@@ -33,6 +36,11 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
     }
 
     const control = new Samsung(configTizen)
+    const upnpClient = new UPnPClient({
+        url: `http://${device.tizenIp}:9197/dmr`,
+        eventsServerPort: device.tizenUpnpPort
+    });
+
     control.on('token', (token: string) => {
         logger.warning(`Token has changed, new value is '${token}' - update it in config file!!!`)
     })
@@ -90,31 +98,31 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
         }),
     });
 
-    // const volumeProperty = nodeLight.addProperty({
-    //     propertyId: 'volume',
-    //     dataType: PropertyDataType.integer,
-    //     format: '0:80',
-    //     name: 'TV',
-    //     settable: true,
-    //     callback: handleAction(async (newValue) => {
-    //         await bravia.setVolume(newValue);
-    //         return true
-    //     })
-    // });
+    const volumeProperty = nodeLight.addProperty({
+        propertyId: 'volume',
+        dataType: PropertyDataType.integer,
+        format: '0:80',
+        name: 'TV',
+        settable: true,
+        callback: handleAction(async (newValue) => {
+            await upnpClient.call(SVC_RENDERINGCONTROL, "SetVolume", { InstanceID: 0, Channel: "Master", DesiredVolume: parseInt(newValue) })
+            return true
+        })
+    });
 
-    // const muteProperty = nodeLight.addProperty({
-    //     propertyId: 'mute',
-    //     dataType: PropertyDataType.boolean,
-    //     name: 'Ztlumit',
-    //     settable: true,
-    //     callback: handleAction(async (newValue) => {
-    //         if (newValue == "true")
-    //             await bravia.muteSpeaker()
-    //         else
-    //             await bravia.unmuteSpeaker()
-    //         return true
-    //     }),
-    // });
+    const muteProperty = nodeLight.addProperty({
+        propertyId: 'mute',
+        dataType: PropertyDataType.boolean,
+        name: 'Ztlumit',
+        settable: true,
+        callback: handleAction(async (newValue) => {
+            if (newValue == "true")
+                await upnpClient.call(SVC_RENDERINGCONTROL, "SetMute", { InstanceID: 0, Channel: "Master", DesiredMute: true })
+            else
+                await upnpClient.call(SVC_RENDERINGCONTROL, "SetMute", { InstanceID: 0, Channel: "Master", DesiredMute: false })
+            return true
+        }),
+    });
 
     // if (device.braviaActions) {
     //     nodeLight.addProperty({
@@ -163,6 +171,18 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
 
     syncStatus();
     const syncInterval = setInterval(syncStatus, 3 * 60 * 1000);
+
+    upnpClient.subscribe(SVC_RENDERINGCONTROL, (e: { instanceId: number, name: "Mute" | "Volume", value: number }) => {
+        switch (e.name) {
+            case "Mute":
+                if (e.value == 0) muteProperty.setValue("false")
+                else muteProperty.setValue("true")
+                break;
+            case "Volume":
+                volumeProperty.setValue(e.value.toString())
+                break;
+        }
+    })
 
     return {
         cleanUp: function () {

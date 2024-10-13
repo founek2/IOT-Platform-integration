@@ -1,0 +1,41 @@
+{
+  "name": "node-upnp",
+  "version": "1.3.0",
+  "description": "Modern UPnP Client Library",
+  "main": "index.js",
+  "scripts": {
+    "test": "nyc ava",
+    "release": "release-it"
+  },
+  "keywords": [
+    "upnp",
+    "media",
+    "player",
+    "tv",
+    "music",
+    "dlna",
+    "iot",
+    "smart home",
+    "device",
+    "home automation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/velocityzen/node-upnp.git"
+  },
+  "author": "Alexey Novikov <v@2dubs.com>",
+  "license": "MIT",
+  "dependencies": {
+    "concat-stream": "^2.0.0",
+    "fast-xml-parser": "^3.16.0",
+    "got": "^10.6.0",
+    "he": "^1.2.0",
+    "network-address": "^1.1.2",
+    "node-ssdp": "^4.0.0"
+  },
+  "devDependencies": {
+    "ava": "^6.0.0",
+    "nyc": "^17.0.0",
+    "release-it": "^17.6.0"
+  }
+}
