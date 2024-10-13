@@ -182,7 +182,7 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
                 volumeProperty.setValue(e.value.toString())
                 break;
         }
-    })
+    }).catch(e => logger.error(e))
 
     return {
         cleanUp: function () {
