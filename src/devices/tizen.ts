@@ -150,29 +150,16 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
 
     plat.init();
 
-    control.on('connect', () => {
-        logger.debug('connected')
-        if (powerProperty.getValue() != "true") powerProperty.setValue('true');
-    });
-    control.on('close', () => {
-        logger.debug('disconnected')
-        if (powerProperty.getValue() != "false") powerProperty.setValue('false');
-    });
+    // control.on('connect', () => {
+    //     logger.debug('connected')
+    //     if (powerProperty.getValue() != "true") powerProperty.setValue('true');
+    // });
+    // control.on('close', () => {
+    //     logger.debug('disconnected')
+    //     if (powerProperty.getValue() != "false") powerProperty.setValue('false');
+    // });
 
-    async function syncStatus() {
-        const isOn = await control.isAvailablePing()
-        if (isOn) {
-            if (powerProperty.getValue() != "true") powerProperty.setValue('true');
-        }
-        else {
-            if (powerProperty.getValue() != "false") powerProperty.setValue('false');
-        }
-    }
-
-    syncStatus();
-    const syncInterval = setInterval(syncStatus, 3 * 60 * 1000);
-
-    upnpClient.subscribe(SVC_RENDERINGCONTROL, (e: { instanceId: number, name: "Mute" | "Volume", value: number }) => {
+    function updateListener(e: { instanceId: number, name: "Mute" | "Volume", value: number }) {
         switch (e.name) {
             case "Mute":
                 if (e.value == 0) muteProperty.setValue("false")
@@ -182,7 +169,24 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
                 volumeProperty.setValue(e.value.toString())
                 break;
         }
-    }).catch(e => logger.error(e))
+    }
+
+    async function syncStatus() {
+        const isOn = await control.isAvailablePing()
+        if (isOn) {
+            if (powerProperty.getValue() != "true") {
+                powerProperty.setValue('true');
+
+                upnpClient.subscribe(SVC_RENDERINGCONTROL, updateListener).catch(() => logger.error('Failed subscribe to updates'))
+            }
+        }
+        else {
+            if (powerProperty.getValue() != "false") powerProperty.setValue('false');
+        }
+    }
+
+    syncStatus();
+    const syncInterval = setInterval(syncStatus, 3 * 60 * 1000);
 
     return {
         cleanUp: function () {
