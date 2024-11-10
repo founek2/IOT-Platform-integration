@@ -120,11 +120,11 @@ export function transformProperty(
         dataType: PropertyDataType.boolean,
         name,
         settable: Boolean(expose.access & settableMask),
-        translateForZigbee: (newValue) => {
+        translateForZigbee: (newValue: string) => {
           if (newValue === "true") return expose.value_on;
           else return expose.value_off;
         },
-        translateForPlatform: (newValue) => {
+        translateForPlatform: (newValue: string) => {
           if (expose.value_on === newValue) return "true";
           else return "false"
         },

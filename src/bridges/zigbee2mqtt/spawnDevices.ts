@@ -1,7 +1,8 @@
-import { DeviceTransformed, TransformedExpose } from "./convertor.ts";
+import { DeviceTransformed, TransformedExpose, type TransformedExposes } from "./convertor.ts";
 import { Platform, ComponentType, Logger, Node } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { translate } from "./translate.ts";
 import { ILocalStorage } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/storage.ts";
+import { PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/type.ts";
 
 interface SpawnConfig {
     userName: string,
@@ -34,10 +35,19 @@ export async function spawnDevices(
         );
         platforms.push(plat);
 
+        const hasSwitch = device.definition?.exposes.some((node: TransformedExposes) => {
+            if ('features' in node) {
+                if (node.type === "switch") return true;
+                return node.features.some(property => property.dataType == PropertyDataType.boolean)
+            } else {
+                return node.dataType === PropertyDataType.boolean
+            }
+        })
+
         const thing = plat.addNode(
             "node",
             device.friendly_name || "Node",
-            ComponentType.generic,
+            hasSwitch ? ComponentType.switch : ComponentType.generic,
         );
 
         for (const node of device.definition?.exposes || []) {
