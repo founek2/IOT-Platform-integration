@@ -38,11 +38,26 @@ export function transformAndOverrideDevice(devices: Device[], overrides: Overrid
     const override = overrides[device.friendly_name]
     if (override?.name) device.friendly_name = override.name;
 
+    if (!device.definition) return {
+      ...device, definition: null
+    };
+
+    // Shift battery and linkquality to end of list
+    const exposesChunked = Object.groupBy(device.definition.exposes, (node) => {
+      if ('features' in node) {
+        return "all"
+      } else if (node.property === "battery" || node.property === "linkquality") {
+        return "end"
+      } else {
+        return "all"
+      }
+    })
+
     const dev: DeviceTransformed = {
       ...device,
       definition: (device.definition ? {
         ...device.definition,
-        exposes: device.definition?.exposes.map(transformAndOverrideProperty(override?.properties)) || []
+        exposes: [...(exposesChunked.all || []), ...(exposesChunked.end || [])].map(transformAndOverrideProperty(override?.properties)) || []
       } : null)
     }
     return dev

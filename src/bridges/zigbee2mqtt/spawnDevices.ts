@@ -38,16 +38,23 @@ export async function spawnDevices(
         const hasSwitch = device.definition?.exposes.some((node: TransformedExposes) => {
             if ('features' in node) {
                 if (node.type === "switch") return true;
-                return node.features.some(property => property.dataType == PropertyDataType.boolean)
-            } else {
-                return node.dataType === PropertyDataType.boolean
             }
+
+            return false;
+        })
+
+        const hasSensor = device.definition?.exposes.some((node: TransformedExposes) => {
+            if (!('features' in node)) {
+                return node.dataType === PropertyDataType.float && !["battery", "linkquality"].includes(node.propertyId)
+            }
+
+            return false;
         })
 
         const thing = plat.addNode(
             "node",
             device.friendly_name || "Node",
-            hasSwitch ? ComponentType.switch : ComponentType.generic,
+            hasSwitch ? ComponentType.switch : hasSensor ? ComponentType.sensor : ComponentType.generic,
         );
 
         for (const node of device.definition?.exposes || []) {
