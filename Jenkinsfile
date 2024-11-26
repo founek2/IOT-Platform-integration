@@ -1,12 +1,8 @@
 pipeline {
- 	// Clean workspace before doing anything
-    // deleteDir()
-    agent any
+    agent { label 'docker-node' }
 
     stages {
         stage('Building image') {
-            agent { label 'docker-node' }
-
             steps{
                 script {
                     sh "ci/docker-build.sh"
