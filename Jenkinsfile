@@ -5,7 +5,7 @@ pipeline {
 
     stages {
         stage('Building image') {
-            agent { label 'java-docker-slave' }
+            agent { label 'docker-node' }
 
             steps{
                 script {
