@@ -254,7 +254,7 @@ export class UPnPClient {
     try {
       await this.renewSubscription({ url, sid, serviceId });
     } catch (e) {
-      console.warn(`Error on renewal: ${e}. Retrying in 5 seconds...`);
+      // console.warn(`Error on renewal: ${e}. Retrying in 5 seconds...`);
       const timer = setTimeout(this.retrySubscriptionUntilSuccess.bind(this, { url, sid, serviceId }), 5000);
       this.subscriptions[serviceId].timer = timer;
     }
