@@ -4,6 +4,21 @@ import { FactoryFn } from '../types.ts';
 import mqtt from "npm:mqtt@5";
 import { topicParser } from './zigbee2mqtt/topicParser.ts';
 
+function retry<T>(fn: () => T, every: number = 5_000, onError: (err: unknown) => any) {
+    return new Promise<T>((res) => {
+        const interval = setInterval(async () => {
+            try {
+                const data = await fn()
+                clearInterval(interval)
+                res(data)
+            } catch (err) {
+                onError(err)
+            }
+        }, every)
+    })
+
+}
+
 export const Schema = SchemaValidator({
     frigateUrl: string,
     frigateMqtt: {
@@ -20,12 +35,16 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
     const cams: Record<string, Property> = {};
 
     const HOST = bridge.frigateUrl;
-    const frigateConfigRes = await fetch(`${HOST}/api/config`);
-    if (!frigateConfigRes.ok) {
-        throw new Error(`Failed to communicate with Frigate on url: ${HOST}`)
-    }
 
-    const frigateConfig = await frigateConfigRes.json() as FrigateRemoteConfig
+    async function fetchConfig(): Promise<FrigateRemoteConfig> {
+        const frigateConfigRes = await fetch(`${HOST}/api/config`);
+        if (!frigateConfigRes.ok) {
+            throw new Error(`Failed to communicate with Frigate on url: ${HOST}`)
+        }
+        return frigateConfigRes.json()
+    }
+    const frigateConfig = await retry(fetchConfig, 5000, () => logger.error("Failed to fetch config"))
+
     const cameras = frigateConfig.cameras;
 
     const plat = new Platform(bridge.id, config.userName, bridge.name, config.mqtt.uri, config.mqtt.port, storage);
