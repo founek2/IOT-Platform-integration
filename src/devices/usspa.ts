@@ -22,9 +22,8 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
         dataType: PropertyDataType.boolean,
         name: 'Filtrace',
         settable: true,
-        callback: function () {
-
-            return false;
+        callback: function (value) {
+            return usspa.setFiltration(value === "true");
         },
     });
 
@@ -43,9 +42,8 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
         dataType: PropertyDataType.boolean,
         name: 'Bubliny',
         settable: true,
-        callback: function () {
-
-            return false;
+        callback: function (value) {
+            return usspa.setBubbles(value === "true")
         },
     });
 
@@ -54,9 +52,8 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
         dataType: PropertyDataType.boolean,
         name: 'Trysky',
         settable: true,
-        callback: function () {
-
-            return false;
+        callback: function (value) {
+            return usspa.setNozzles(value === "true")
         },
     });
     const lightProperty = nodeLight.addProperty({
@@ -64,9 +61,8 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
         dataType: PropertyDataType.boolean,
         name: 'Světlo',
         settable: true,
-        callback: function () {
-
-            return false;
+        callback: function (value) {
+            return usspa.setLight(value === "true")
         },
     });
 
@@ -93,8 +89,7 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
         unitOfMeasurement: '°C',
         settable: true,
         callback: function (value) {
-
-            return false;
+            return usspa.setTempPreset(value)
         },
     });
 
