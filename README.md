@@ -40,6 +40,8 @@ Exposing of all devices.
 - Intex whirlpool - integrated via TCP connection to ESP display
   - current and target temperate
   - control: heating, bubbles, nozzles, filtration
+- USSPA whirpool - custom http cloud API (custom API)
+  - filtration, bubbles, temperature, pumps
 - Solax inverter - integrated via Solax Cloud service, since gen X3 does not allow reading of MQTT messages (before it was just plain JSON)
   - Reading of all available values
 - Yamaha reciever - [API spec](./_media/yamaha_API_spec.pdf)
