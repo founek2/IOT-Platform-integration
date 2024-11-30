@@ -109,7 +109,7 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
             if (data.actualTemp) tempCurrentProperty.setValue(data.actualTemp)
             if (data.reqTemp) tempPresetProperty.setValue(data.reqTemp)
             if (data.pump2) nozzlesProperty.setValue(data.pump2 == "1" ? "true" : "false")
-            if (data.pump3) tempPresetProperty.setValue(data.pump3 == "1" ? "true" : "false")
+            if (data.pump3) bubblesProperty.setValue(data.pump3 == "1" ? "true" : "false")
             if (data.light1) lightProperty.setValue(data.light1 == "1" ? "true" : "false")
         } catch (e: any) {
             if (e.code === 'EHOSTUNREACH' || e.code === 'ETIMEDOUT') {
