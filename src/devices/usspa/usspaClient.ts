@@ -4,6 +4,14 @@ export enum Command {
     GetLastConn = "GetLastConn"
 }
 
+export enum SetCommand {
+    SetPump1 = "SetPump1",
+    SetPump2 = "SetPump2",
+    SetPump3 = "SetPump3",
+    SetReqTemp = "SetReqTemp",
+    SetLight1 = "SetLight1",
+}
+
 export class UsspaClient {
     serialNumber: string;
 
@@ -11,20 +19,33 @@ export class UsspaClient {
         this.serialNumber = serialNumber;
     }
 
-    sendCommand(command: Command) {
+    private sendData(data: string) {
         return fetch("https://in.usspa.cz/app/", {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             method: "POST",
             body: new URLSearchParams({
-                'data': `SN:${this.serialNumber};Cmd,${command}`
+                'data': data
             })
         })
     }
 
+    private sendGetCommand(command: Command) {
+        return this.sendData(`SN:${this.serialNumber};Cmd,${command}`)
+    }
+
+    private sendSetCommand(command: SetCommand, value: string) {
+        return this.sendData(`SN:${this.serialNumber};Cmd,${command};${command.replace("Set", "")},${value}`)
+    }
+
+    private async setCommand(command: SetCommand, value: string): Promise<boolean> {
+        const result = await this.sendSetCommand(command, value)
+        return Boolean(result)
+    }
+
     async sync() {
-        const res = await this.sendCommand(Command.GetCommand)
+        const res = await this.sendGetCommand(Command.GetCommand)
         if (!res.ok) return;
         const data = this.parseResponse(await res.text())
         if (!data) return;
@@ -50,10 +71,39 @@ export class UsspaClient {
         };
     }
 
-    parseResponse(data: string): ([cmd: string, value: string, date: string])[] | null {
+    private parseResponse(data: string): ([cmd: string, value: string, date: string])[] | null {
         if (data.includes('ErrCode,1')) return null;
         const [error, ...commands] = data.split(';')
 
         return commands.map(c => c.split(',')) as any
+    }
+
+    setFiltration(state: boolean): Promise<boolean> {
+        return this.setCommand(SetCommand.SetPump1, state ? "1" : "0")
+    }
+
+    async setNozzles(state: boolean): Promise<boolean> {
+        if (state) {
+            const result1 = await this.setCommand(SetCommand.SetPump1, "2")
+            const result2 = await this.setCommand(SetCommand.SetPump2, "1")
+            return result1 && result2;
+        }
+        else {
+            const result2 = await this.setCommand(SetCommand.SetPump2, "0")
+            const result1 = await this.setCommand(SetCommand.SetPump1, "0")
+            return result1 && result2;
+        }
+    }
+
+    setBubbles(state: boolean): Promise<boolean> {
+        return this.setCommand(SetCommand.SetPump3, state ? "1" : "0");
+    }
+
+    setTempPreset(target: string): Promise<boolean> {
+        return this.setCommand(SetCommand.SetReqTemp, target);
+    }
+
+    setLight(state: boolean): Promise<boolean> {
+        return this.setCommand(SetCommand.SetLight1, state ? "1" : "0");
     }
 };
