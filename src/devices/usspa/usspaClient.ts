@@ -57,6 +57,7 @@ export class UsspaClient {
         const pump2 = data.find(d => d[0] == 'Pump2')?.[1] as "0" | "1";
         const pump3 = data.find(d => d[0] == 'Pump3')?.[1] as "0" | "1";
         const light1 = data.find(d => d[0] == 'Light1')?.[1] as "0" | "1";
+        const heater = data.find(d => d[0] == 'HeaterState')?.[1] as "0" | "1";
         const notifications = data.find(d => d[0] == 'Notifications')?.[1];
 
         return {
@@ -67,7 +68,8 @@ export class UsspaClient {
             pump2,
             pump3,
             light1,
-            notifications
+            heater,
+            notifications,
         };
     }
 
