@@ -105,7 +105,7 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
             const data = await usspa.sync()
             if (!data) return;
 
-            if (data.filtration) filterProperty.setValue(data.filtration == "1" ? "true" : "false")
+            if (data.filtration) filterProperty.setValue(data.filtration != "0" ? "true" : "false")
             if (data.actualTemp) tempCurrentProperty.setValue(data.actualTemp)
             if (data.reqTemp) tempPresetProperty.setValue(data.reqTemp)
             if (data.pump2) nozzlesProperty.setValue(data.pump2 == "1" ? "true" : "false")
