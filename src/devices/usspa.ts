@@ -77,7 +77,7 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
         name: 'Chyba',
     });
 
-    const nodeSwitch = plat.addNode('sensor', 'Výřivka teplota', ComponentType.sensor);
+    const nodeSwitch = plat.addNode('sensor', 'Vířivka teplota', ComponentType.sensor);
     const tempCurrentProperty = nodeSwitch.addProperty({
         propertyId: 'tempCurrent',
         dataType: PropertyDataType.float,
