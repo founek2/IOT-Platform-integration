@@ -52,7 +52,7 @@ export class UsspaClient {
 
         const reqTemp = data.find(d => d[0] == 'ReqTemp')?.[1];
         const actualTemp = data.find(d => d[0] == 'ActTemp')?.[1];
-        const filtration = data.find(d => d[0] == 'Filtration')?.[1] as "0" | "1";
+        const filtration = data.find(d => d[0] == 'FiltrState')?.[1] as "0" | "1";
         const pump1 = data.find(d => d[0] == 'Pump1')?.[1] as "0" | "1" | "2";
         const pump2 = data.find(d => d[0] == 'Pump2')?.[1] as "0" | "1";
         const pump3 = data.find(d => d[0] == 'Pump3')?.[1] as "0" | "1";
