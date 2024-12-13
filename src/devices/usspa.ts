@@ -5,13 +5,14 @@ import { UsspaClient } from "./usspa/usspaClient.ts";
 import { PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/type.ts";
 
 export const Schema = SchemaValidator({
-    serialNumber: string,
+    usspaSerialNumber: string,
+    usspaPassword: string,
 })
 
 type YamahaConfig = Type<typeof Schema>;
 
 export const factory: FactoryFn<YamahaConfig> = function (config, device, logger, storage) {
-    const usspa = new UsspaClient(device.serialNumber);
+    const usspa = new UsspaClient(device.usspaSerialNumber, device.usspaPassword);
 
     const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
@@ -119,12 +120,21 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
         }
     }
 
-    syncPlatform();
+    async function login() {
+        const result = await usspa.login()
+        if (!result) {
+            logger.error("Failed to login");
+        }
+    }
+
+    login().then(() => syncPlatform())
     const syncInterval = setInterval(syncPlatform, 5 * 60 * 1000);
+    const loginInterval = setInterval(login, 12 * 60 * 60 * 1000);
 
     return {
         cleanUp: function () {
             clearInterval(syncInterval)
+            clearInterval(loginInterval)
             plat.disconnect()
         },
         healthCheck: function () {
