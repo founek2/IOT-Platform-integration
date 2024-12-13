@@ -1,3 +1,5 @@
+import { res } from "https://deno.land/x/faster@v12.1/middlewares/parser.ts";
+
 export enum Command {
     GetCommand = "GetCommand",
     GetTimeZone = "GetTimeZone",
@@ -14,9 +16,11 @@ export enum SetCommand {
 
 export class UsspaClient {
     serialNumber: string;
+    password: string
 
-    constructor(serialNumber: string) {
+    constructor(serialNumber: string, password: string) {
         this.serialNumber = serialNumber;
+        this.password = password;
     }
 
     private sendData(data: string) {
@@ -71,6 +75,16 @@ export class UsspaClient {
             heater,
             notifications,
         };
+    }
+
+    async login() {
+        try {
+            const res = await this.sendData(`Login,${this.serialNumber},${this.password}`)
+            const data = this.parseResponse(await res.text())
+            return Boolean(data);
+        } catch (_e) {
+            return false;
+        }
     }
 
     private parseResponse(data: string): ([cmd: string, value: string, date: string])[] | null {

@@ -2,7 +2,7 @@
 All communication is done via POST on url <https://in.usspa.cz/app/>. Requests body is send via `data` key as URL encoded body.
 
 ## Login
-This is used only for checking of valid sn/password combination. There is absolutely no security in place.
+This is used for checking of valid sn/password combination. Also, it seems to whitelist your IP address, so your API calls will not be rejected. Looks like they have some firewall in-place after all. Make sure to call login every 24 hours.
 
 Send this as data: `Login,SERIAL_NUMBER,PASSWORD` and expect one of these responses:
 - `ErrCode,1` - Invalid credentials
