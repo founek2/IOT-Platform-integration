@@ -123,18 +123,16 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
     async function login() {
         const result = await usspa.login()
         if (!result) {
-            logger.error("Failed to login");
+            logger.error("Failed to login, probably invalid password");
         }
     }
 
     login().then(() => syncPlatform())
     const syncInterval = setInterval(syncPlatform, 5 * 60 * 1000);
-    const loginInterval = setInterval(login, 12 * 60 * 60 * 1000);
 
     return {
         cleanUp: function () {
             clearInterval(syncInterval)
-            clearInterval(loginInterval)
             plat.disconnect()
         },
         healthCheck: function () {

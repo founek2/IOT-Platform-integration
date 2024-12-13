@@ -1,5 +1,3 @@
-import { res } from "https://deno.land/x/faster@v12.1/middlewares/parser.ts";
-
 export enum Command {
     GetCommand = "GetCommand",
     GetTimeZone = "GetTimeZone",
@@ -14,9 +12,12 @@ export enum SetCommand {
     SetLight1 = "SetLight1",
 }
 
+const HOURS_6 = 6 * 60 * 60 * 1000;
+
 export class UsspaClient {
     serialNumber: string;
     password: string
+    lastLoginAt?: Date
 
     constructor(serialNumber: string, password: string) {
         this.serialNumber = serialNumber;
@@ -48,7 +49,14 @@ export class UsspaClient {
         return Boolean(result)
     }
 
+    /**
+     * Automatically logs in and refreshes it periodically
+     */
     async sync() {
+        if (!this.lastLoginAt || (this.lastLoginAt && this.lastLoginAt.getTime() < Date.now() - HOURS_6)) {
+            await this.login()
+        }
+
         const res = await this.sendGetCommand(Command.GetCommand)
         if (!res.ok) return;
         const data = this.parseResponse(await res.text())
@@ -81,6 +89,8 @@ export class UsspaClient {
         try {
             const res = await this.sendData(`Login,${this.serialNumber},${this.password}`)
             const data = this.parseResponse(await res.text())
+            if (data) this.lastLoginAt = new Date()
+
             return Boolean(data);
         } catch (_e) {
             return false;
