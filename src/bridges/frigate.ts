@@ -24,7 +24,9 @@ export const Schema = SchemaValidator({
     frigateMqtt: {
         uri: string,
         port: number,
-        prefix: string.optional("frigate")
+        prefix: string.optional("frigate"),
+        username: string.optional(),
+        password: string.optional()
     },
     frigateStreamUrl: string.optional()
 })
@@ -76,6 +78,8 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
 
     const client = mqtt.connect(bridge.frigateMqtt.uri, {
         port: bridge.frigateMqtt.port,
+        username: bridge.frigateMqtt.username,
+        password: bridge.frigateMqtt.password,
     });
 
     client.on("connect", function () {

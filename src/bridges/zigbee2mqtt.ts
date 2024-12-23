@@ -25,7 +25,9 @@ export const Schema = SchemaValidator({
     zigbeeMqtt: {
         uri: string,
         port: number,
-        prefix: string.optional("zigbee2mqtt")
+        prefix: string.optional("zigbee2mqtt"),
+        username: string.optional(),
+        password: string.optional(),
     },
     whitelist: array.of(string).optional(),
     override: SchemaValidator.record(string, overrideSchema).optional()
@@ -41,6 +43,8 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
     const zigbeeClient = mqtt.connect(bridge.zigbeeMqtt.uri, {
         port: bridge.zigbeeMqtt.port,
         keepalive: 30,
+        username: bridge.zigbeeMqtt.username,
+        password: bridge.zigbeeMqtt.password,
     });
 
     zigbeeClient.on("connect", function () {
