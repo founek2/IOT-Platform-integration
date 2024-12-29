@@ -19,6 +19,10 @@ export class UnifiClient {
     }
 
     async login() {
+        // clear previos cookies to prevent 403
+        this.cookieJar.removeCookies();
+
+        // login
         const res = await this.fetch(this.baseUrl + "/api/auth/login", {
             headers: {
                 referer: this.baseUrl + "/auth/login",
@@ -29,7 +33,6 @@ export class UnifiClient {
             body: JSON.stringify({
                 username: this.user,
                 password: this.password,
-                rememberMe: true
             })
         })
         if (!res.ok) throw new Error("Failed to login")
