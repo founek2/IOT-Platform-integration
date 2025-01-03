@@ -2,6 +2,9 @@ import { FactoryFn } from '../types.ts';
 import SchemaValidator, { string, array, Type, object } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { Logger } from 'https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts';
 import { UnifiClient } from './unifi/unifiClient.ts';
+import isBefore from "https://deno.land/x/date_fns@v2.15.0/isBefore/index.js";
+import addHours from "https://deno.land/x/date_fns@v2.15.0/addHours/index.js";
+
 
 const SchemaWebhook = SchemaValidator({
     url: string,
@@ -17,8 +20,6 @@ const SchemaAction = SchemaValidator({
     lastSeen: string.optional("2d")
 })
 
-type ActionConfig = Type<typeof SchemaAction>;
-
 export const Schema = SchemaValidator({
     unifiControllerUrl: string,
     unifiUserName: string,
@@ -29,7 +30,7 @@ export const Schema = SchemaValidator({
 type WatcherConfig = Type<typeof Schema>;
 
 const MINUTES_30 = 30 * 60 * 1000;
-const cache: Record<string, boolean | undefined> = {}
+const cache: Record<string, { timestamp: Date, value: boolean } | undefined> = {}
 
 export const factory: FactoryFn<WatcherConfig> = function (_config, device, logger) {
 
@@ -45,12 +46,15 @@ export const factory: FactoryFn<WatcherConfig> = function (_config, device, logg
 
                 const isOnline = activeDevices.some(d => hosts.includes(d.ip))
                 const cacheKey = hosts.join();
-                if (isOnline && !cache[cacheKey]) {
-                    cache[cacheKey] = isOnline
+                const cached = cache[cacheKey];
+                const outdated = cached?.timestamp && isBefore(addHours(cached?.timestamp, 3), new Date(), {})
+
+                if (isOnline && (cached?.value !== isOnline || outdated)) {
+                    cache[cacheKey] = { value: isOnline, timestamp: new Date() }
 
                     callAllWebhooks(webhooksUp, logger)
-                } else if (!isOnline && (cache[cacheKey] || cache[cacheKey] == undefined)) {
-                    cache[cacheKey] = isOnline
+                } else if (!isOnline && (cached?.value !== isOnline || outdated)) {
+                    cache[cacheKey] = { value: isOnline, timestamp: new Date() }
 
                     callAllWebhooks(webhooksDown, logger)
                 }
@@ -64,16 +68,8 @@ export const factory: FactoryFn<WatcherConfig> = function (_config, device, logg
     const interval = setInterval(runSync, MINUTES_30)
 
     return {
-        cleanUp: async function () {
+        cleanUp: function () {
             clearInterval(interval)
-
-            for (const { webhooksDown } of device.unifiWatcher) {
-                try {
-                    await callAllWebhooks(webhooksDown, logger)
-                } catch (err) {
-                    logger.error(err)
-                }
-            }
         },
         healthCheck: function () {
             return {
