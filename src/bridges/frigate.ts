@@ -1,4 +1,4 @@
-import SchemaValidator, { Type, string, number } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, number, boolean } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
 import { Platform, DeviceStatus, PropertyDataType, ComponentType, Property } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
 import { FactoryFn } from '../types.ts';
 import mqtt from "npm:mqtt@5";
@@ -19,6 +19,17 @@ function retry<T>(fn: () => T, every: number = 5_000, onError: (err: unknown) =>
 
 }
 
+const propertySchema = SchemaValidator({
+    name: string,
+    type: SchemaValidator.enum(PropertyDataType),
+    format: string.optional(),
+    settable: boolean,
+})
+const sensorSchema = SchemaValidator({
+    name: string.optional(),
+    properties: SchemaValidator.record(string, propertySchema).optional()
+})
+
 export const Schema = SchemaValidator({
     frigateUrl: string,
     frigateMqtt: {
@@ -28,7 +39,8 @@ export const Schema = SchemaValidator({
         username: string.optional(),
         password: string.optional()
     },
-    frigateStreamUrl: string.optional()
+    frigateStreamUrl: string.optional(),
+    sensors: SchemaValidator.record(string, sensorSchema).optional()
 })
 
 type FrigateConfig = Type<typeof Schema>;
@@ -62,7 +74,8 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
                 format: bridge.frigateStreamUrl.includes("webrtc") ? "webrtc" : "video/mp4",
                 retained: true,
             });
-            const multipleStreams = Boolean(frigateConfig.go2rtc?.streams?.[streamName].length);
+            const streams = frigateConfig.go2rtc?.streams?.[streamName];
+            const multipleStreams = streams && streams.length > 1;
             stream.setValue(`${bridge.frigateStreamUrl}?src=${streamName}&media=video+audio${multipleStreams ? '+microphone' : ''}`)
         }
 
@@ -70,9 +83,23 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
             propertyId: 'image',
             dataType: PropertyDataType.binary,
             name: "Událost",
-            format: "image/jpeg"
+            format: "image/jpeg",
         });
         cams[name] = property
+
+        const sensors = bridge.sensors?.[name];
+        if (sensors) {
+            for (const propertyId in sensors.properties) {
+                const property = sensors.properties[propertyId]
+                node.addProperty({
+                    propertyId: propertyId,
+                    dataType: property.type,
+                    name: property.name,
+                    format: property.format,
+                    settable: property.settable
+                })
+            }
+        }
     }
 
     plat.init()
