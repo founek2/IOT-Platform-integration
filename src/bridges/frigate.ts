@@ -62,7 +62,8 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
                 format: bridge.frigateStreamUrl.includes("webrtc") ? "webrtc" : "video/mp4",
                 retained: true,
             });
-            stream.setValue(`${bridge.frigateStreamUrl}?src=${streamName}`)
+            const multipleStreams = Boolean(frigateConfig.go2rtc?.streams?.[streamName].length);
+            stream.setValue(`${bridge.frigateStreamUrl}?src=${streamName}&media=video+audio${multipleStreams ? '+microphone' : ''}`)
         }
 
         const property = node.addProperty({
