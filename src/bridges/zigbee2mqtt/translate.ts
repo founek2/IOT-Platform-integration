@@ -1,6 +1,7 @@
+import { Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts";
 import translateDeepl from "npm:translate";
 
-export function translate(text: string, deeplApiKey?: string): string | Promise<string> {
+export async function translate(text: string, logger: Logger, deeplApiKey?: string): Promise<string> {
     if (!deeplApiKey) return text;
 
     if (text.toLowerCase() === "linkquality") return "Síla signálu";
@@ -11,8 +12,15 @@ export function translate(text: string, deeplApiKey?: string): string | Promise<
     /** @ts-ignore */
     translateDeepl.key = deeplApiKey;
 
-    return translateDeepl(text.replace(/_/g, " "), {
-        to: "cs",
-        from: "en"
-    });
+    try {
+        const translated = await translateDeepl(text.replace(/_/g, " "), {
+            to: "cs",
+            from: "en"
+        });
+
+        return translated;
+    } catch (err) {
+        logger.warning(err)
+        return text;
+    }
 }
