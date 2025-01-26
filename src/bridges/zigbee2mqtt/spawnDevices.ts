@@ -93,7 +93,7 @@ export async function assignProperty(
     deeplApiKey: string | undefined,
     log: Logger
 ) {
-    const translatedName = await translate(expose.name, deeplApiKey);
+    const translatedName = await translate(expose.name, log, deeplApiKey);
 
     thing.addProperty({
         ...expose,
