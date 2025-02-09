@@ -65,7 +65,7 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
     for (const [name, _camera] of Object.entries(cameras)) {
         const node = plat.addNode(name, name, ComponentType.generic);
 
-        const streamName = Object.keys(frigateConfig.go2rtc?.streams || {}).find(streamName => streamName.includes(name))
+        const streamName = Object.keys(frigateConfig.go2rtc?.streams || {}).sort().find(streamName => streamName.includes(name))
         if (bridge.frigateStreamUrl && streamName) {
             const stream = node.addProperty({
                 propertyId: 'stream',
