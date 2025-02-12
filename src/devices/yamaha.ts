@@ -10,11 +10,17 @@ export const Schema = SchemaValidator({
 
 type YamahaConfig = Type<typeof Schema>;
 
-export const factory: FactoryFn<YamahaConfig> = function (config, device, logger, storage) {
+export const factory: FactoryFn<YamahaConfig> = async function (config, device, logger, storage) {
     if (device.yamahaEventPort)
         logger.info("Enabling events subscription")
 
     const yamaha = new YamahaClient(device.yamahaIp, device.yamahaEventPort);
+
+    try {
+        await yamaha.sync()
+    } catch (_) {
+        logger.warning("failed to get initial config")
+    }
 
     const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);
 
@@ -32,7 +38,7 @@ export const factory: FactoryFn<YamahaConfig> = function (config, device, logger
     const recieverVolume = reciever.addProperty({
         propertyId: 'volume',
         dataType: PropertyDataType.integer,
-        format: '0:80',
+        format: `0:${yamaha.getMaxVolume() || 100}`,
         name: 'Hlasitost',
         settable: true,
         callback: (newValue) => {

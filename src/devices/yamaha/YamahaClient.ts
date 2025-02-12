@@ -3,6 +3,7 @@ import { Input, Power, YamahaEvent } from "./type.ts";
 
 export enum YamahaInput {
     net_radio = "net_radio",
+    tv = "tv",
     bluetooth = "bluetooth",
     airplay = "airplay",
     tuner = "tuner",
@@ -13,6 +14,7 @@ export class YamahaClient extends EventEmitter<{
     power(value: Power): any
     input(value: Input): any
     volume(value: number): any
+    maxVolume(value: number): any
 }> {
     ip: string
     eventPort?: number;
@@ -20,6 +22,7 @@ export class YamahaClient extends EventEmitter<{
 
     power?: Power;
     volume?: number;
+    maxVolume?: number;
     input?: YamahaInput;
 
     constructor(ip: string, eventPort?: number) {
@@ -31,6 +34,7 @@ export class YamahaClient extends EventEmitter<{
         this.on("power", (v) => this.power = v)
         this.on("input", (v) => this.input = (v as YamahaInput))
         this.on("volume", (v) => this.volume = v)
+        this.on("maxVolume", (v) => this.maxVolume = v)
 
         if (!this.eventPort) return;
 
@@ -65,11 +69,13 @@ export class YamahaClient extends EventEmitter<{
     async sync() {
         const res = await this.sendRequest("/YamahaExtendedControl/v1/main/getStatus")
         if (!res.ok) return this;
-        const { power, volume, input } = await res.json()
+        const data = await res.json()
+        const { power, volume, input, max_volume } = data;
 
         if (this.power !== power) this._emitPower(power)
         if (this.volume !== volume) this._emitVolume(volume)
         if (this.input !== input) this._emitInput(input)
+        if (this.maxVolume !== max_volume) this._emitMaxVolume(max_volume)
 
         return this;
     }
@@ -99,7 +105,7 @@ export class YamahaClient extends EventEmitter<{
     };
 
     async setVolume(volume: number) {
-        if (volume < 0 || volume > 100)
+        if (volume < 0 || volume > (this.maxVolume || 100))
             return false;
 
         const res = await this.sendRequest(`/YamahaExtendedControl/v1/main/setVolume?volume=${volume}`)
@@ -118,6 +124,10 @@ export class YamahaClient extends EventEmitter<{
         return this.volume;
     }
 
+    getMaxVolume() {
+        return this.maxVolume;
+    }
+
     getInput() {
         return this.input;
     }
@@ -132,5 +142,9 @@ export class YamahaClient extends EventEmitter<{
 
     _emitVolume(volume: number) {
         this.emit("volume", volume)
+    }
+
+    _emitMaxVolume(volume: number) {
+        this.emit("maxVolume", volume)
     }
 };
