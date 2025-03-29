@@ -33,7 +33,7 @@ export const factory: FactoryFn<BraviaConfig> = function (config, device, logger
         const fn: CallbackFn = async (newValue): Promise<boolean | void> => {
             try {
                 return await cb(newValue)
-            } catch (err) {
+            } catch (err: any) {
                 if (err.message?.includes('status code: 403'))
                     logger.error('action failed, invalid pre-shared key.')
                 else logger.error('action failed. Error:', err)

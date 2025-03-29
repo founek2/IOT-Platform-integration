@@ -1,4 +1,4 @@
-import { res, Server } from "https://deno.land/x/faster/mod.ts";
+import { res, Server, Context, NextFunc } from "https://deno.land/x/faster/mod.ts";
 import { FactoryReturn } from "./types.ts";
 
 export async function startHealthcheckServer(instances: FactoryReturn[]) {
@@ -6,7 +6,7 @@ export async function startHealthcheckServer(instances: FactoryReturn[]) {
     server.get(
         "/api/devices/health",
         res("json"),
-        async (ctx, next) => {
+        async (ctx: Context, next: NextFunc) => {
             const checks = instances.map((plat) => {
                 const health = plat.healthCheck()
                 if (Array.isArray(health)) {
