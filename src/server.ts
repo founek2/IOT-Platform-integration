@@ -1,4 +1,4 @@
-import { res, Server, Context, NextFunc } from "https://deno.land/x/faster/mod.ts";
+import { res, Server, Context, NextFunc } from "https://deno.land/x/faster@v11.9/mod.ts";
 import { FactoryReturn } from "./types.ts";
 
 export async function startHealthcheckServer(instances: FactoryReturn[]) {
