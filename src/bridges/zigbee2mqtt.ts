@@ -7,7 +7,7 @@ import { topicParser } from './zigbee2mqtt/topicParser.ts';
 import { calculateHash } from './zigbee2mqtt/hash.ts';
 import { spawnDevices } from './zigbee2mqtt/spawnDevices.ts';
 import { filterByWhitelist } from './zigbee2mqtt/whitelistFilter.ts';
-import { Device } from './zigbee2mqtt/zigbeeTypes.ts';
+import { Device } from './zigbee2mqtt/types/device.ts';
 import { transformAndOverrideDevice } from './zigbee2mqtt/convertor.ts';
 
 const propertySchema = SchemaValidator({

@@ -1,7 +1,6 @@
 import { PropertyDataType, PropertyArgs } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
-import { DeviceExposesSwitch } from "./zigbeeTypes.ts";
-import { DeviceExposesGeneric } from "./zigbeeTypes.ts";
-import { Device } from "./zigbeeTypes.ts";
+import { Generic, Option } from "./types/exposes.ts";
+import { Device } from "./types/device.ts";
 import xyz from "npm:color-space/xyz.js"
 import xyy from "npm:color-space/xyy.js"
 
@@ -65,7 +64,7 @@ export function transformAndOverrideDevice(devices: Device[], overrides: Overrid
 }
 
 function transformAndOverrideProperty(override: DeviceOverride['properties'] = {}) {
-  function applySingle(expose: DeviceExposesGeneric): TransformedExposes {
+  function applySingle(expose: Option): TransformedExposes {
     const propOverride = override[expose.property]
 
     const transformed = transformProperty(expose)
@@ -87,17 +86,17 @@ function transformAndOverrideProperty(override: DeviceOverride['properties'] = {
     return transformed
   }
 
-  function apply(expose: DeviceExposesGeneric | DeviceExposesSwitch): TransformedExposes {
+  function apply(expose: Generic): TransformedExposes {
     if ('features' in expose && expose.type != "composite") {
       const property: TransformedExposes = {
         type: expose.type,
-        features: expose.features.map(applySingle) as PropertyArgs[]
+        features: expose.features?.map(applySingle) as PropertyArgs[]
       }
 
       return property
+    } else {
+      return applySingle(expose as Option);
     }
-
-    return applySingle(expose);
   }
 
   return apply
@@ -106,7 +105,7 @@ function transformAndOverrideProperty(override: DeviceOverride['properties'] = {
 const settableMask = 1 << 1;
 
 export function transformProperty(
-  expose: DeviceExposesGeneric,
+  expose: Option,
 ): TransformedExpose {
   const name = expose.label || expose.name.replace(/_/g, " ")
   switch (expose.type) {
@@ -152,6 +151,13 @@ export function transformProperty(
         settable: Boolean(expose.access & settableMask),
       };
     case "composite":
+      return {
+        propertyId: expose.property,
+        dataType: PropertyDataType.string,
+        name,
+        settable: Boolean(expose.access & settableMask),
+      };
+    case "list":
       return {
         propertyId: expose.property,
         dataType: PropertyDataType.string,

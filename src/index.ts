@@ -65,7 +65,7 @@ let config: Config
 try {
     config = SchemaGeneral.validator(configRaw) as unknown as Config
     logger.info("Config loaded", JSON.stringify(config))
-} catch (err) {
+} catch (err: any) {
     logger.error(`Config validation failed, ${err.message}`)
     Deno.exit(1)
 }
@@ -88,7 +88,7 @@ function constructDevice(id: string, device: ConfigDevice, module: Module) {
         // Skip validation if Schema not present
         module.Schema?.validator(data)
         if (!data.name) throw new Error("Missing name")
-    } catch (err) {
+    } catch (err: any) {
         const [path, reason] = err.message.split(":") as [string, string];
         const value = path.split(".").reduce((acc, key) => acc ? (acc as any)[key] : acc, data)
         logger.error(`Data validation failed. ${reason.trim()}, path: ${[id, path].join(".")}, provided value:`, value)
