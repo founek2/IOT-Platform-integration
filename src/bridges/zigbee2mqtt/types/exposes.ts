@@ -6,7 +6,7 @@ export interface Base {
     name: string;
     label: string;
     access: number;
-    type: "switch" | "lock" | "binary" | "list" | "numeric" | "enum" | "text" | "composite";
+    type: "lock" | "binary" | "list" | "numeric" | "enum" | "text" | "composite";
     endpoint?: string;
     property: string;
     description?: string;
@@ -62,7 +62,7 @@ export interface Composite extends Base {
 }
 
 export type BaseExtended = Omit<Base, "type"> & {
-    type: "light" | "cover" | "fan" | "climate";
+    type: "light" | "cover" | "fan" | "climate" | "switch";
     features?: Feature[];
 }
 
