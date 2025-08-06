@@ -61,7 +61,7 @@ export interface Composite extends Base {
     features: Feature[];
 }
 
-export type BaseExtended = Omit<Base, "type"> & {
+export type BaseExtended = {
     type: "light" | "cover" | "fan" | "climate" | "switch";
     features?: Feature[];
 }
