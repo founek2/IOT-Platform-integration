@@ -1,5 +1,5 @@
-import SchemaValidator, { Type, string, number } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
-import { Platform, ComponentType, PropertyDataType, PropertyClass, DeviceStatus } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import SchemaValidator, { Type, string, number } from 'computed_types';
+import { Platform, ComponentType, PropertyDataType, PropertyClass, DeviceStatus } from "iot-platform/deno"
 import { Socket } from 'node:net';
 import { decodeData, prepareCommand, commands } from './intex/spaDecoder.ts';
 import { FactoryFn } from '../types.ts';

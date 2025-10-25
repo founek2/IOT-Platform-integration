@@ -1,5 +1,5 @@
 import { Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
-import SchemaValidator, { Type, string, number, unknown } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, number, unknown } from 'computed_types';
 import { ILocalStorage } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/storage.ts";
 
 export enum ModuleType {

@@ -1,7 +1,7 @@
-import SchemaValidator, { Type, string, number, boolean } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
-import { Platform, DeviceStatus, PropertyDataType, ComponentType, Property } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import SchemaValidator, { Type, string, number, boolean } from 'computed_types';
+import { Platform, DeviceStatus, PropertyDataType, ComponentType, Property } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import mqtt from "npm:mqtt@5";
+import mqtt from "mqtt";
 import { topicParser } from './zigbee2mqtt/topicParser.ts';
 
 function retry<T>(fn: () => T, every: number = 5_000, onError: (err: unknown) => any) {

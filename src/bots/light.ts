@@ -1,4 +1,4 @@
-import { ComponentType, PropertyDataType, Platform } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { ComponentType, PropertyDataType, Platform } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
 
 const ONE_HOUR = 60 * 60 * 1000;

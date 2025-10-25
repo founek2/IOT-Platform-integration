@@ -1,5 +1,5 @@
 import * as si from 'npm:systeminformation';
-import { Platform, ComponentType, PropertyDataType, PropertyClass } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { Platform, ComponentType, PropertyDataType, PropertyClass } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
 
 export const factory: FactoryFn = function (config, device, _logger, storage) {

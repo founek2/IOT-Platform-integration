@@ -2,8 +2,8 @@ import { parse } from "https://deno.land/std@0.202.0/yaml/mod.ts";
 import { args, EarlyExitFlag, Option } from "https://deno.land/x/args@2.1.1/index.ts"
 import { Text } from "https://deno.land/x/args@2.1.1/value-types.ts";
 import { Config, Module, SchemaGeneral, ConfigDevice, FactoryReturn, ModuleType } from "./types.ts";
-import SchemaValidator, { string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
-import { Logger, logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import SchemaValidator, { string } from 'computed_types';
+import { Logger, logger } from "iot-platform/deno"
 import { startHealthcheckServer } from "./server.ts";
 import { LocalStorage } from "./localstorage.ts";
 
