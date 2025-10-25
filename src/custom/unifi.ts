@@ -1,6 +1,6 @@
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { string, array, Type, object } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
-import { Logger } from 'https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts';
+import SchemaValidator, { string, array, Type, object } from 'computed_types';
+import { Logger } from 'iot-platform/deno';
 import { UnifiClient } from './unifi/unifiClient.ts';
 import isBefore from "https://deno.land/x/date_fns@v2.15.0/isBefore/index.js";
 import addHours from "https://deno.land/x/date_fns@v2.15.0/addHours/index.js";

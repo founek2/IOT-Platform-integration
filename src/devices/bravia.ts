@@ -1,9 +1,9 @@
 import { exec } from "https://deno.land/x/exec@0.0.5/mod.ts";
-import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number, array } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, number, array } from 'computed_types';
 import { BraviaClient } from "./bravia/BraviaClient.ts"
-import { CallbackFn } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/property.ts";
+import { CallbackFn } from "iot-platform/deno";
 
 const ActionSchema = SchemaValidator({
     name: string,

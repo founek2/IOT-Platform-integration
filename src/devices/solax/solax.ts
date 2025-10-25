@@ -1,4 +1,4 @@
-import mqtt from "npm:mqtt@5";
+import mqtt from "mqtt";
 
 function runClient() {
     const client = mqtt.connect('mqtt://mqtt001.solaxcloud.com', {

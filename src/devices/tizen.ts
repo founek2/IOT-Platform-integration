@@ -1,7 +1,6 @@
-import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { Platform, DeviceStatus, ComponentType, PropertyDataType, CallbackFn } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
-import { CallbackFn } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/property.ts";
+import SchemaValidator, { Type, string, number, } from 'computed_types';
 import { Samsung } from '../../samsung-tv-control/src/index.ts'
 import KEYS from "../../samsung-tv-control/src/keys.ts";
 import UPnPClient from '../../node-upnp/index.js'

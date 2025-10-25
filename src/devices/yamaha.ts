@@ -1,6 +1,6 @@
-import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, number } from 'computed_types';
 import { YamahaClient, YamahaInput } from "./yamaha/YamahaClient.ts"
 
 export const Schema = SchemaValidator({

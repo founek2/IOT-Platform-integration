@@ -1,8 +1,8 @@
-import { PropertyDataType, PropertyArgs } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { PropertyDataType, PropertyArgs } from "iot-platform/deno"
 import { Generic, Option } from "./types/exposes.ts";
 import { Device } from "./types/device.ts";
-import xyz from "npm:color-space/xyz.js"
-import xyy from "npm:color-space/xyy.js"
+import xyz from "color-space/xyz.js"
+import xyy from "color-space/xyy.js"
 
 export type TransformedExpose = PropertyArgs & { translateForZigbee?: (value: any) => any, translateForPlatform?: (value: any) => any }
 export type TransformedExposes =
@@ -45,7 +45,7 @@ export function transformAndOverrideDevice(devices: Device[], overrides: Overrid
     const exposesChunked = Object.groupBy(device.definition.exposes, (node) => {
       if ('features' in node) {
         return "all"
-      } else if (node.property === "battery" || node.property === "linkquality") {
+      } else if ("property" in node && (node.property === "battery" || node.property === "linkquality")) {
         return "end"
       } else {
         return "all"

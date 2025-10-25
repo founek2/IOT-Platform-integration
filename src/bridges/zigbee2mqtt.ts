@@ -1,7 +1,7 @@
-import SchemaValidator, { Type, string, number, array } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
-import { Platform, DeviceStatus, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import SchemaValidator, { Type, string, number, array } from 'computed_types';
+import { Platform, DeviceStatus, PropertyDataType } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import mqtt from "npm:mqtt@5";
+import mqtt from "mqtt";
 import { DeviceTransformed, TransformedExpose } from "./zigbee2mqtt/convertor.ts"
 import { topicParser } from './zigbee2mqtt/topicParser.ts';
 import { calculateHash } from './zigbee2mqtt/hash.ts';

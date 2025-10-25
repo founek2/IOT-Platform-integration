@@ -1,5 +1,5 @@
-import { Logger } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts";
-import * as deepl from 'npm:deepl-node';
+import { Logger } from "iot-platform/deno";
+import * as deepl from 'deepl-node';
 
 let translator: deepl.Translator
 

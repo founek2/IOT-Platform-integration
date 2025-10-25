@@ -1,6 +1,6 @@
-import { Platform, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { Platform, ComponentType, PropertyDataType } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, array } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
+import SchemaValidator, { Type, string, array } from 'computed_types';
 
 const ActionSchema = SchemaValidator({
     mqttTopic: string,

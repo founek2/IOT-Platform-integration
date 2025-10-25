@@ -1,5 +1,5 @@
-import { assert } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import "https://deno.land/std@0.200.0/dotenv/load.ts";
+import { assert } from "@std/assert";
+import "@std/dotenv";
 
 const config = {
     MQTT_SERVER_URL: Deno.env.get("MQTT_SERVER_URL") as string,

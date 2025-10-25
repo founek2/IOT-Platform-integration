@@ -1,0 +1,15 @@
+{
+  "tasks": {
+    "dev": "deno run --watch main.ts"
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@1",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225.5",
+    "mqtt": "npm:mqtt@5",
+    "iot-platform/deno": "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts",
+    "computed_types": "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts",
+    "prusa-link": "npm:@jamesgopsill/prusa-link",
+    "deepl-node": "npm:deepl-node",
+    "color-space": "npm:color-space@^2"
+  }
+}

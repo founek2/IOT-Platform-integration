@@ -1,8 +1,8 @@
 import { DeviceTransformed, TransformedExpose, type TransformedExposes } from "./convertor.ts";
-import { Platform, ComponentType, Logger, Node } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { Platform, ComponentType, Logger, Node } from "iot-platform/deno"
 import { translate } from "./translate.ts";
 import { ILocalStorage } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/storage.ts";
-import { PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/type.ts";
+import { PropertyDataType } from "iot-platform/deno";
 
 interface SpawnConfig {
     userName: string,

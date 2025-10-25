@@ -1,6 +1,6 @@
 // Logic from https://github.com/mathieu-mp/intex-spa/tree/main
 
-import { assert } from "https://deno.land/std@0.200.0/assert/mod.ts";
+import { assert } from "@std/assert";
 
 function mod(number: bigint, mod: bigint) {
     return ((number % mod) + mod) % mod;

@@ -1,5 +1,5 @@
 // Logic from https://github.com/mathieu-mp/intex-spa/tree/main
-import { assertObjectMatch } from "https://deno.land/std@0.200.0/assert/mod.ts";
+import { assertObjectMatch } from "@std/assert";
 import { checksum_as_str } from "./checksum.ts";
 
 

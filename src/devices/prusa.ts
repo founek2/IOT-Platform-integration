@@ -1,7 +1,7 @@
-import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts"
+import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string } from 'https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts';
-import { PrusaLink, PrusaLinkConfig } from "npm:@jamesgopsill/prusa-link"
+import SchemaValidator, { Type, string } from 'computed_types';
+import { PrusaLink, PrusaLinkConfig } from "prusa-link"
 
 export const Schema = SchemaValidator({
     prusaIp: string,
