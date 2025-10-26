@@ -1,11 +1,12 @@
-import { exec } from 'node:child_process'
+import child_process from 'node:child_process'
+import util from 'node:util';
 import * as fs from 'node:fs'
 import * as net from 'node:net'
 import * as path from 'node:path'
 import * as request from 'npm:request'
 import { wakeOnLAN } from "./wol.ts"
-// @deno-types="npm:@types/websocket"
-import { client as WebSocket, connection } from 'npm:websocket'
+// @deno-types="npm:@types/ws"
+import WebSocket from 'npm:ws'
 import { KEYS } from './keys.ts'
 import Logger from './logger.ts'
 import { Configuration, WSData, App, Command } from './types.ts'
@@ -21,6 +22,7 @@ import {
 } from './helpers.ts'
 import { EventEmitter } from "https://deno.land/std@0.110.0/node/events.ts";
 import { Buffer } from "node:buffer";
+const exec = util.promisify(child_process.exec);
 
 class Samsung extends EventEmitter {
   private IP: string
@@ -34,8 +36,7 @@ class Samsung extends EventEmitter {
   private SAVE_TOKEN: boolean
   private TOKEN_FILE = path.join(Deno.cwd(), 'token.txt')
   private WS_URL: string
-  private ws: WebSocket
-  private connection?: connection
+  private ws!: WebSocket;
 
   constructor(config: Configuration) {
     super();
@@ -66,8 +67,6 @@ class Samsung extends EventEmitter {
       this.TOKEN = this._getTokenFromFile() || ''
     }
     this.WS_URL = this._getWSUrl()
-
-    this.ws = new WebSocket({ tlsOptions: { rejectUnauthorized: false, timeout: 5000 } });
 
     this.LOGGER.log(
       'internal config',
@@ -259,19 +258,15 @@ class Samsung extends EventEmitter {
     });
   }
 
-  public isAvailablePing(): Promise<boolean> {
-    return new Promise((resolve) => {
-      exec('ping -c 1 -W 1 ' + this.IP, (error, stdout, _) => {
-        if (error) {
-          this.LOGGER.error('TV is not available', { error }, 'isAvailable')
-          // Do not reject since we're testing for the TV to be available
-          resolve(false)
-        } else {
-          this.LOGGER.log('TV is available', { stdout }, 'isAvailable')
-          resolve(true)
-        }
-      })
-    })
+  public async isAvailablePing(): Promise<boolean> {
+    try {
+      const { stdout } = await exec('ping -c 1 -W 1 ' + this.IP)
+      this.LOGGER.log('TV is available', { stdout }, 'isAvailable')
+      return true
+    } catch (error) {
+      this.LOGGER.error('TV is not available', { error }, 'isAvailable')
+      return false
+    }
   }
 
   public async turnOn(): Promise<boolean> {
@@ -287,10 +282,6 @@ class Samsung extends EventEmitter {
     }
   }
 
-  public getLogs() {
-    this.LOGGER.saveLogToFile()
-  }
-
   /**
    * If you don't need to keep connection, you can to close immediately
    */
@@ -299,9 +290,9 @@ class Samsung extends EventEmitter {
   }
 
   private reconnect() {
-    if (this.connection?.state == 'open') return;
+    if (this.ws.readyState == WebSocket.OPEN) return;
     this.LOGGER.log('connecting to ' + this.WS_URL, '');
-    this.ws.connect(this.WS_URL);
+    this.connect();
   }
 
   public ready(): Promise<void> {
@@ -311,64 +302,62 @@ class Samsung extends EventEmitter {
   }
 
   private connect() {
-    this.ws.on('connect', (connection) => {
+    this.ws = new WebSocket(this.WS_URL, { rejectUnauthorized: false, timeout: 5000 });
+
+    this.ws.on('open', () => {
       this.LOGGER.log('connected', 'ws.on connect');
-      this.connection = connection;
       this.emit('connect')
+    })
 
-      connection.on('message', (message) => {
-        if (message.type != "utf8") return;
-        const data: WSData = JSON.parse(message.utf8Data);
-        this.emit('data', data)
+    this.ws.on('message', (message) => {
+      if (!(message instanceof Buffer)) return;
+      const data: WSData = JSON.parse(message.toString());
+      this.emit('data', data)
 
-        this.LOGGER.log('data: ', JSON.stringify(data, null, 2), 'ws.on message')
+      this.LOGGER.log('data: ', JSON.stringify(data, null, 2), 'ws.on message')
 
-        if (data.event !== 'ms.channel.connect') {
-          this.LOGGER.log('if not correct event', JSON.stringify(data, null, 2), 'ws.on message')
-        }
+      if (data.event !== 'ms.channel.connect') {
+        this.LOGGER.log('if not correct event', JSON.stringify(data, null, 2), 'ws.on message')
+      }
 
-        if (data.event == "ms.channel.connect") {
-          this.emit('ready');
+      if (data.event == "ms.channel.connect") {
+        this.emit('ready');
 
-          const token = data?.data?.token;
-          if (token) {
-            const sToken = String(token)
-            this.LOGGER.log('got token', sToken, 'getToken')
-            this.TOKEN = sToken
-            this.WS_URL = this._getWSUrl()
+        const token = data?.data?.token;
+        if (token) {
+          const sToken = String(token)
+          this.LOGGER.log('got token', sToken, 'getToken')
+          this.TOKEN = sToken
+          this.WS_URL = this._getWSUrl()
 
-            if (this.SAVE_TOKEN) {
-              this._saveTokenToFile(sToken)
-            }
-
-            this.emit('token', token)
-            connection.close();
+          if (this.SAVE_TOKEN) {
+            this._saveTokenToFile(sToken)
           }
-        }
-      })
 
-      connection.on('close', () => {
-        this.emit('close')
-        this.LOGGER.log('', '', 'ws.on close');
-        setTimeout(() => this.reconnect(), 3000);
-      })
-
-      connection.on('error', (err) => {
-        let errorMsg = ''
-        if (err.message === 'EHOSTUNREACH' || err.message === 'ECONNREFUSED') {
-          errorMsg = 'TV is off or unavailable'
+          this.emit('token', token)
+          this.ws.close();
         }
-        console.error(errorMsg, err)
-        this.LOGGER.error(errorMsg, err, 'ws.on error')
-      })
+      }
+    })
+
+    this.ws.on('close', () => {
+      this.emit('close')
+      this.LOGGER.log('', '', 'ws.on close');
+      setTimeout(() => this.reconnect(), 5000);
+    })
+
+    this.ws.on('error', (err) => {
+      let errorMsg = ''
+      if (err.message === 'EHOSTUNREACH' || err.message === 'ECONNREFUSED') {
+        errorMsg = 'TV is off or unavailable'
+      }
+      this.LOGGER.error(errorMsg, err, 'ws.on error')
+      this.ws.close()
     })
 
     this.ws.on('connectFailed', () => {
-      this.emit('close')
-      setTimeout(() => this.reconnect(), 5_000);
+      this.ws.close()
     })
-
-    this.reconnect();
   }
 
   private _send(
@@ -376,7 +365,7 @@ class Samsung extends EventEmitter {
     done?: (err: null | (Error), res: WSData | null) => void,
     eventHandle?: string,
   ) {
-    if (this.connection?.state != 'open') return;
+    if (this.ws.readyState != WebSocket.OPEN) return;
 
     function rejected(err?: Error) {
       if (done && err) done(err, null);
@@ -390,14 +379,13 @@ class Samsung extends EventEmitter {
 
       const listener = (d: WSData) => {
         clearTimeout(timeout);
-        this.removeListener('data', listener)
         done(null, d);
       }
-      this.on('data', listener);
+      this.once('data', listener);
     }
 
     this.LOGGER.log('sending cmd', '');
-    this.connection?.send(JSON.stringify(command), rejected);
+    this.ws.send(JSON.stringify(command), rejected);
   }
 
   private _sendPromise(command: Command, eventHandle?: string): Promise<WSData | null> {

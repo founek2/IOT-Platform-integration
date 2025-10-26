@@ -7,3 +7,4 @@ ecosystem.config.js
 tsconfig.tsbuildinfo
 **/.DS_STORE
 neco.yaml
+config.yaml
