@@ -171,6 +171,7 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
     }
 
     async function syncStatus() {
+        console.log("syncing")
         const isOn = await control.isAvailablePing()
         if (isOn) {
             if (powerProperty.getValue() != "true") {

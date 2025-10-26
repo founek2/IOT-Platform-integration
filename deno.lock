@@ -34,7 +34,8 @@
     "npm:plex-api@*": "5.3.2_request@2.88.2",
     "npm:request@*": "2.88.2",
     "npm:systeminformation@*": "5.27.11",
-    "npm:websocket@*": "1.0.35"
+    "npm:websocket@*": "1.0.35",
+    "npm:ws@*": "8.18.3"
   },
   "jsr": {
     "@std/assert@1.0.13": {
