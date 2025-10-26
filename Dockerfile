@@ -7,6 +7,8 @@ RUN apt update && apt install -y pipx inetutils-ping && apt clean && pipx instal
 
 WORKDIR /app
 
+COPY deno.json deno.lock ./
+RUN deno install --allow-import
 COPY ./ ./
 
 # Run once to load all dependencies in modules
