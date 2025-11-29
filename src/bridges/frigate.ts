@@ -113,7 +113,7 @@ export const factory: FactoryFn<FrigateConfig> = async function (config, bridge,
     client.on("connect", function () {
         client.subscribe(`${bridge.frigateMqtt.prefix}/#`);
     });
-    client.on("reconnect", () => logger.silly("reconnected"))
+    client.on("reconnect", () => logger.silly("reconnecting..."))
 
     client.on("error", function (err) {
         logger.error("error", err);

@@ -1,21 +1,22 @@
+import { exec } from "https://deno.land/x/exec@0.0.5/mod.ts";
 import { Platform, DeviceStatus, ComponentType, PropertyDataType, CallbackFn } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number, } from 'computed_types';
+import SchemaValidator, { Type, string, number, array } from 'computed_types';
 import { Samsung } from '../../samsung-tv-control/src/index.ts'
 import KEYS from "../../samsung-tv-control/src/keys.ts";
 import UPnPClient from '../../node-upnp/index.js'
 
-// const ActionSchema = SchemaValidator({
-//     name: string,
-//     url: string
-// })
+const ActionSchema = SchemaValidator({
+    name: string,
+    url: string
+})
 
 export const Schema = SchemaValidator({
     tizenIp: string,
     tizenMac: string,
     tizenToken: string.optional(),
     tizenUpnpPort: number.optional(8081),
-    //braviaActions: array.of(ActionSchema).optional()
+    tizenActions: array.of(ActionSchema).optional()
 })
 
 type TizenConfig = Type<typeof Schema>;
@@ -123,29 +124,29 @@ export const factory: FactoryFn<TizenConfig> = function (config, device, logger,
         }),
     });
 
-    // if (device.braviaActions) {
-    //     nodeLight.addProperty({
-    //         propertyId: 'view',
-    //         dataType: PropertyDataType.enum,
-    //         format: [...device.braviaActions.map(v => v.name), "stop"].join(","),
-    //         name: 'Zobrazit',
-    //         settable: true,
-    //         callback: handleAction(async (newValue) => {
-    //             const action = device.braviaActions?.find(v => v.name === newValue)
-    //             if (action) {
-    //                 await exec(`catt --device ${device.braviaIp} cast_site "${action.url}"`)
-    //                 return true
-    //             }
+    if (device.tizenActions) {
+        nodeLight.addProperty({
+            propertyId: 'view',
+            dataType: PropertyDataType.enum,
+            format: [...device.tizenActions.map(v => v.name), "stop"].join(","),
+            name: 'Zobrazit',
+            settable: true,
+            callback: handleAction(async (newValue) => {
+                const action = device.tizenActions?.find(v => v.name === newValue)
+                if (action) {
+                    await exec(`catt --device ${device.tizenIp} cast_site "${action.url}"`)
+                    return true
+                }
 
-    //             if (newValue === "stop") {
-    //                 await exec(`catt --device ${device.braviaIp} stop`)
-    //                 return true
-    //             }
+                if (newValue === "stop") {
+                    await exec(`catt --device ${device.tizenIp} stop`)
+                    return true
+                }
 
-    //             return false;
-    //         }),
-    //     });
-    // }
+                return false;
+            }),
+        });
+    }
 
     plat.init();
 
