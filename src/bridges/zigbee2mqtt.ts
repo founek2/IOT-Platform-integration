@@ -143,8 +143,8 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
     function publishSetToZigbee(friendly_name: string, propertyName: string) {
         return (value: boolean | string | number) =>
             zigbeeClient.publish(
-                `zigbee2mqtt/${friendly_name}/set/${propertyName}`,
-                String(value),
+                `zigbee2mqtt/${friendly_name}/set`,
+                JSON.stringify({ [propertyName]: value }),
             );
     }
 
