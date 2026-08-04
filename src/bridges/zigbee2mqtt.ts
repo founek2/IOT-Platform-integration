@@ -140,12 +140,17 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
         })
     })
 
-    function publishSetToZigbee(friendly_name: string, propertyName: string) {
-        return (value: boolean | string | number) =>
-            zigbeeClient.publish(
+    function publishSetToZigbee(friendly_name: string, propertyName: string, dataType: PropertyDataType) {
+        return (value: boolean | string | number) => {
+            if (dataType === PropertyDataType.float || dataType === PropertyDataType.integer) {
+                value = Number(value);
+            }
+
+            return zigbeeClient.publish(
                 `zigbee2mqtt/${friendly_name}/set`,
                 JSON.stringify({ [propertyName]: value }),
             );
+        }
     }
 
     async function shutdownDevices(instances: Platform[]) {
