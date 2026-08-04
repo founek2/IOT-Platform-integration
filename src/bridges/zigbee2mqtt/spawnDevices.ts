@@ -11,7 +11,7 @@ interface SpawnConfig {
 }
 export async function spawnDevices(
     devices: DeviceTransformed[],
-    publishSetToZigbee: (friendly_name: string, property: string) => (value: string) => void,
+    publishSetToZigbee: (friendly_name: string, property: string, dataType: PropertyDataType) => (value: string) => void,
     config: SpawnConfig,
     logger: Logger,
     storage: ILocalStorage
@@ -63,7 +63,7 @@ export async function spawnDevices(
                     await assignProperty(
                         property,
                         thing,
-                        publishSetToZigbee(friendly_name, property.propertyId),
+                        publishSetToZigbee(friendly_name, property.propertyId, property.dataType),
                         config.deeplApiKey,
                         logger
                     );
@@ -72,7 +72,7 @@ export async function spawnDevices(
                 await assignProperty(
                     node,
                     thing,
-                    publishSetToZigbee(friendly_name, node.propertyId),
+                    publishSetToZigbee(friendly_name, node.propertyId, node.dataType),
                     config.deeplApiKey,
                     logger
                 );
