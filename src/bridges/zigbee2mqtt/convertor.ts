@@ -22,6 +22,7 @@ export interface DeviceDefinitionTransformed {
 }
 
 
+const nonPrimaryProperties = ["battery", "linkquality", "voltage", "power_outage_count"]
 type PropertyOverride = {
   name?: string,
   format?: string,
@@ -45,7 +46,7 @@ export function transformAndOverrideDevice(devices: Device[], overrides: Overrid
     const exposesChunked = Object.groupBy(device.definition.exposes, (node) => {
       if ('features' in node) {
         return "all"
-      } else if ("property" in node && (node.property === "battery" || node.property === "linkquality")) {
+      } else if ("property" in node && nonPrimaryProperties.includes(node.property)) {
         return "end"
       } else {
         return "all"
