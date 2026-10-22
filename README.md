@@ -30,12 +30,14 @@ Exposing of all devices.
 ### Zigbee2mqtt device rebuilds
 
 Changed Zigbee2mqtt device lists trigger a complete rebuild of the IoT device
-instances. Rebuilds run sequentially, including disconnecting the previous clients,
-so multiple device-list updates cannot create competing MQTT clients for the same
-device. Identical lists are skipped after a successful rebuild. Failed rebuilds
-are logged and their partially initialized clients are disconnected; a subsequent
-device-list update can retry the rebuild. Shutdown skips queued rebuilds and waits
-for an active rebuild before disconnecting all clients.
+instances. Devices initialize in parallel within each rebuild, while property
+setup remains sequential within each device. Rebuilds run sequentially, including
+disconnecting the previous clients, so multiple device-list updates cannot create
+competing MQTT clients for the same device. Identical lists are skipped after a
+successful rebuild. Failed rebuilds wait for all device initializations to settle
+before they are logged and their partially initialized clients are disconnected;
+a subsequent device-list update can retry the rebuild. Shutdown skips queued
+rebuilds and waits for an active rebuild before disconnecting all clients.
 
 ## Devices
 

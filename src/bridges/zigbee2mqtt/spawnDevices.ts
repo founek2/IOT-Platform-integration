@@ -15,9 +15,10 @@ export async function spawnDevices(
     config: SpawnConfig,
     logger: Logger,
     storage: ILocalStorage,
+    platforms: Platform[]
 ) {
-    const platforms: Platform[] = []
-    for (const device of devices) {
+    // Track each instance before initialization so failed builds can be cleaned up.
+    const results = await Promise.allSettled(devices.map(async (device) => {
         // TODO delete api key when not paired
         // const paired = platformDevices.find(
         //   (d) => d.metadata.deviceId === device.ieee_address,
@@ -79,7 +80,10 @@ export async function spawnDevices(
         }
 
         plat.init();
-    }
+    }));
+
+    const errors = results.filter((result) => result.status === "rejected").map((result) => result.reason);
+    if (errors.length) throw new AggregateError(errors, "Failed to initialize Zigbee device clients");
 
     return platforms
 }

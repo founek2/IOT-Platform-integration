@@ -146,6 +146,65 @@ async function withBridge(
     }
 }
 
+Deno.test("devices initialize in parallel while rebuilds remain sequential", async () => {
+    const gate = Promise.withResolvers<void>();
+    let translations = 0;
+    await withBridge({
+        translate: async () => {
+            if (++translations === 1) await gate.promise;
+        },
+    }, async ({ bridge, send, clients, debug, conflicts }) => {
+        send([device("one"), device("two")]);
+        try {
+            await waitFor(() => clients.some((client) => client.options.clientId === "mqttjs_two"));
+            assert.equal(translations, 2);
+            assert(!clients.some((client) => client.options.clientId === "mqttjs_one"));
+            send([device("one", "updated"), device("two", "updated")]);
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            assert.equal(translations, 2);
+        } finally {
+            gate.resolve();
+        }
+        await waitFor(() => debug.filter(([text]) => text === "Refreshing devices").length === 2 && clients.length === 5);
+        await bridge.cleanUp();
+        assert(clients.every((client) => !client.connected));
+        assert.deepEqual(conflicts, []);
+    });
+});
+
+Deno.test("failed parallel builds wait for pending devices before cleanup", async () => {
+    const gate = Promise.withResolvers<void>();
+    let translations = 0;
+    let failed = false;
+    await withBridge({
+        translate: async () => {
+            if (++translations === 3) await gate.promise;
+        },
+        publish: (client) => {
+            if (!failed && client.options.clientId === "mqttjs_two") {
+                failed = true;
+                throw new Error("Initialization failed");
+            }
+        },
+    }, async ({ bridge, send, clients, errors, events, conflicts }) => {
+        send([device("one"), device("two"), device("three")]);
+        try {
+            await waitFor(() => failed && translations === 3);
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            assert.equal(errors.length, 0);
+            assert(!events.some((event) => event.startsWith("end:")));
+            send([device("one"), device("two"), device("three")]);
+        } finally {
+            gate.resolve();
+        }
+        await waitFor(() => errors.length === 1 && clients.length === 7);
+        assert(events.indexOf("end:mqttjs_three") < events.lastIndexOf("connect:mqttjs_one"));
+        await bridge.cleanUp();
+        assert(clients.every((client) => !client.connected));
+        assert.deepEqual(conflicts, []);
+    });
+});
+
 Deno.test("device updates rebuild sequentially and skip queued identical lists", async () => {
     const gate = Promise.withResolvers<void>();
     let translations = 0;
