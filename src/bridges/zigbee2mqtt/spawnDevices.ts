@@ -14,10 +14,9 @@ export async function spawnDevices(
     publishSetToZigbee: (friendly_name: string, property: string, dataType: PropertyDataType) => (value: string) => void,
     config: SpawnConfig,
     logger: Logger,
-    storage: ILocalStorage
+    storage: ILocalStorage,
 ) {
     const platforms: Platform[] = []
-
     for (const device of devices) {
         // TODO delete api key when not paired
         // const paired = platformDevices.find(

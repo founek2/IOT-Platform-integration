@@ -39,6 +39,9 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
     let instances: Platform[] = [];
     let globalData: { devices: DeviceTransformed[], fingerprint: string } = { devices: [], fingerprint: "" };
     const availabilityCache: Record<string, DeviceStatus | undefined> = {};
+    let refreshQueue = Promise.resolve();
+    let closing = false;
+    let cleanupPromise: Promise<void> | undefined;
 
     const zigbeeClient = mqtt.connect(bridge.zigbeeMqtt.uri, {
         port: bridge.zigbeeMqtt.port,
@@ -62,40 +65,18 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
     });
 
     zigbeeClient.on("message", function (topic, message) {
+        if (closing) return;
         if (!topic.includes("logging") && !topic.startsWith("zigbee2mqtt/bridge/")) logger.debug("message", topic, message.toString());
 
         const handle = topicParser(topic, message);
 
-        handle(`${bridge.zigbeeMqtt.prefix}/bridge/devices`, async function (_topic, message) {
+        handle(`${bridge.zigbeeMqtt.prefix}/bridge/devices`, function (_topic, message) {
             const devicesStr = message.toString();
-            const hash = await calculateHash(devicesStr)
-            if (globalData.fingerprint === hash) {
-                logger.debug("Fingerprint matches, skipping refresh")
-                return
-            }
-
-            const definitions = JSON.parse(devicesStr) as unknown as Device[]
-            const filteredDefinitions = bridge.whitelist
-                ? definitions.filter(filterByWhitelist(bridge.whitelist))
-                : definitions;
-
-            globalData = {
-                devices: transformAndOverrideDevice(filteredDefinitions, bridge.override),
-                fingerprint: hash,
-            };
-
-            logger.debug("Refreshing devices");
-            await shutdownDevices(instances);
-            instances = await spawnDevices(globalData.devices, publishSetToZigbee, { ...config, deeplApiKey: bridge.deeplApiKey }, logger, storage);
-
-            // Backfill last known availability from cache
-            Object.entries(availabilityCache).forEach(([friendly_name, status]) => {
-                const plat = instances.find(byIdOrName(friendly_name));
-                if (!plat || !status) return;
-
-                plat.publishStatus(status)
-            })
-
+            refreshQueue = refreshQueue
+                .then(() => refreshDevices(devicesStr))
+                .catch((err) => {
+                    logger.error("Failed to refresh Zigbee devices", err);
+                });
         });
 
         handle(`${bridge.zigbeeMqtt.prefix}/+`, function (_topic, message, [friendly_name]) {
@@ -134,11 +115,56 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
             const status = data.state === "online" ? DeviceStatus.ready : DeviceStatus.disconnected;
             availabilityCache[friendly_name] = status;
 
-            const plat = instances.find((p) => p.deviceName === friendly_name);
+            const plat = instances.find(byIdOrName(friendly_name));
             if (!plat) return;
             plat.publishStatus(status)
         })
     })
+
+    async function refreshDevices(devicesStr: string) {
+        if (closing) return;
+
+        const hash = await calculateHash(devicesStr);
+        if (closing) return;
+        if (globalData.fingerprint === hash) {
+            logger.debug("Fingerprint matches, skipping refresh");
+            return;
+        }
+
+        const definitions = JSON.parse(devicesStr) as Device[];
+        const filteredDefinitions = bridge.whitelist
+            ? definitions.filter(filterByWhitelist(bridge.whitelist))
+            : definitions;
+        const devices = transformAndOverrideDevice(filteredDefinitions, bridge.override);
+
+        logger.debug("Refreshing devices");
+        globalData.fingerprint = "";
+        await shutdownDevices(instances);
+        instances = [];
+        globalData = { devices, fingerprint: "" };
+        if (closing) return;
+
+        try {
+            await spawnDevices(devices, publishSetToZigbee, { ...config, deeplApiKey: bridge.deeplApiKey }, logger, storage, instances);
+        } catch (err) {
+            try {
+                await shutdownDevices(instances);
+                instances = [];
+            } catch (cleanupError) {
+                throw new AggregateError([err, cleanupError], "Device rebuild and cleanup failed");
+            }
+            throw err;
+        }
+        globalData.fingerprint = hash;
+
+        // Backfill last known availability from cache
+        Object.entries(availabilityCache).forEach(([friendly_name, status]) => {
+            const plat = instances.find(byIdOrName(friendly_name));
+            if (!plat || !status) return;
+
+            plat.publishStatus(status);
+        });
+    }
 
     function publishSetToZigbee(friendly_name: string, propertyName: string, dataType: PropertyDataType) {
         return (value: boolean | string | number) => {
@@ -154,26 +180,48 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
     }
 
     async function shutdownDevices(instances: Platform[]) {
-        logger.warning("Shuting down clients");
-        const promises = instances.map((plat) => plat.disconnect());
-        await Promise.all(promises);
+        logger.warning("Shutting down clients");
+        const results = await Promise.allSettled(
+            instances.filter((plat) => plat.client).map((plat) => plat.disconnect())
+        );
+        const errors = results.filter((result) => result.status === "rejected").map((result) => result.reason);
+        if (errors.length) throw new AggregateError(errors, "Failed to shut down Zigbee device clients");
     }
 
 
     return {
-        cleanUp: async function () {
-            await shutdownDevices(instances)
-            await zigbeeClient.endAsync()
+        cleanUp: function () {
+            closing = true;
+            if (cleanupPromise) {
+                return cleanupPromise;
+            }
+
+            cleanupPromise = (async () => {
+                await refreshQueue;
+                try {
+                    await shutdownDevices(instances);
+                    instances = [];
+                } finally {
+                    await zigbeeClient.endAsync();
+                }
+            })();
+            return cleanupPromise;
         },
         healthCheck: function () {
-            return instances.map((plat) => ({
-                deviceId: plat.deviceId,
-                connected: plat.client.connected
-            }))
+            return instances.map((plat) => {
+                let connected = false;
+                if (plat.client) {
+                    connected = plat.client.connected;
+                }
+                return {
+                    deviceId: plat.deviceId,
+                    connected
+                };
+            })
         }
     }
 }
 
 function byIdOrName(friendlyName: string) {
-    return (p: Platform) => p.deviceName === friendlyName || p.deviceId === friendlyName
+    return (p: Platform) => Boolean(p.client) && (p.deviceName === friendlyName || p.deviceId === friendlyName)
 }
