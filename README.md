@@ -25,9 +25,70 @@ Exposing of all devices.
 
 - Frigate (NVR) - integrate all your cameras, show current feed and events (snapshots)
 - Zigbee2mqtt - integrate all your Zigbee devices
+- Matter - integrate devices commissioned on a Matter Server
 - Twilio - send sms message as reaction to Mqtt message
 
-### Zigbee2mqtt device rebuilds
+### Matter
+
+Configure the `matter` bridge as shown in [example.yaml](./example.yaml). Its
+`matterUrl` defaults to `ws://192.168.25.5:5580/ws`. The Matter Server must
+remain running and store its fabric and Thread credentials persistently. Its
+WebSocket API is privileged; restrict access to trusted clients and use a
+secure network.
+
+The bridge creates an IoT pairing device with the configured bridge ID and one
+IoT device per Matter node, named `<bridge ID>-matter-<node ID>`. Pair these
+devices with the IoT Platform like other integrations. Existing Matter nodes are
+discovered automatically; additions, removals, availability and updates are
+followed while connected. The bridge reconnects and reloads nodes after a server
+disconnect. Matter node IDs can change if a device is decommissioned and paired
+again.
+
+To commission a new Thread device, configure the Thread dataset on Matter Server
+first, enable Bluetooth there, and put the device in pairing mode. On the IoT
+pairing device, set **Matter pairing code** to the manual code or `MT:` QR
+payload. **Pairing status** reports progress or failure. For Wi-Fi devices,
+configure Wi-Fi credentials on Matter Server first. The bridge does not publish
+the code as a property value or log it, and ignores retained code messages.
+Pairing codes still pass through the IoT Platform and MQTT broker: protect their
+traffic, logs, access and storage; do not retain the command message.
+
+Each Matter endpoint becomes an IoT node. Matter Server supplies the actual
+attribute paths and accepted commands, while the standard Matter data model
+supplies their names, types, enum values and access rights. Application-cluster
+attributes are exposed from those definitions, along with power-source
+attributes with known scalar, bitmap, array or structure types. Writable
+attributes can be set; structured values use JSON and bitmaps use their numeric
+value. Advertised commands are
+available as string properties accepting a JSON object with the command's
+Matter field names (use `{}` for a command without arguments). On/off and
+brightness also have dedicated controls. Observed standard events, such as
+button presses, are exposed as non-retained JSON event properties; the first
+event of a new type creates its property.
+
+Some unit conversions are specified by Matter rather than described by the
+device and are applied separately; other values remain in their raw Matter
+encoding. The model describes standard possibilities,
+so a device may reject a particular enum value or command parameter. Unknown
+vendor-specific clusters, system/security clusters, secret or fabric-scoped
+fields, and binary attributes are not exposed. Commands containing model-marked
+secrets are excluded, and atomic writes require Matter Server schema 15. Protect
+MQTT traffic and logs; generic command payloads must not contain secrets.
+Attribute values and events come from Matter Server's subscriptions, which
+must not be disabled.
+
+### Zigbee2mqtt
+
+The bridge creates an IoT pairing device with the configured bridge ID and name,
+separate from the Zigbee devices. Pair it with the IoT Platform and turn on
+**Allow joining** to permit devices to join for 254 seconds; turn it off to stop
+early. The switch reflects Zigbee2MQTT's reported state, including changes made
+elsewhere and automatic expiry. The control device is disconnected when
+Zigbee2MQTT is unavailable. Initial state synchronization requires MQTT retained
+messages: keep Zigbee2MQTT's `mqtt.force_disable_retain` disabled and use a
+broker that supports retained messages.
+
+#### Device rebuilds
 
 Changed Zigbee2mqtt device lists trigger a complete rebuild of the IoT device
 instances. Devices initialize in parallel within each rebuild, while property

@@ -5,6 +5,7 @@
     "jsr:@std/async@^1.0.7": "1.5.1",
     "jsr:@std/bytes@^1.0.6": "1.0.6",
     "jsr:@std/crypto@*": "1.1.0",
+    "jsr:@std/dotenv@~0.225.6": "0.225.8",
     "jsr:@std/fs@*": "1.0.24",
     "jsr:@std/http@*": "1.1.4",
     "jsr:@std/internal@^1.0.12": "1.0.14",
@@ -13,6 +14,8 @@
     "jsr:@std/path@*": "1.1.6",
     "jsr:@std/path@^1.1.5": "1.1.6",
     "npm:@jamesgopsill/prusa-link@0.1.2": "0.1.2",
+    "npm:@matter-server/ws-client@1.6.0": "1.6.0",
+    "npm:@matter/model@0.18.1-alpha.0-20261114-e4326a175": "0.18.1-alpha.0-20261114-e4326a175",
     "npm:bravia@^1.3.3": "1.3.3",
     "npm:color-space@^2.3.2": "2.3.2",
     "npm:concat-stream@*": "2.0.0",
@@ -49,6 +52,9 @@
     "@std/crypto@1.1.0": {
       "integrity": "b8d6d0a6377a32b213af2661ed7bf1062d94feac0c57def5526a8e74a95c3ec8"
     },
+    "@std/dotenv@0.225.8": {
+      "integrity": "27b8c1a9d00cbf938345a5924487c04d9b27bdd7e7bd1983f54bcf76d0a0174a"
+    },
     "@std/fs@1.0.24": {
       "integrity": "f3061b45b81673a2bece689da041df32d174be064c89eb6397fb5718d3fb7877",
       "dependencies": [
@@ -84,6 +90,69 @@
     },
     "@keyv/serialize@1.1.1": {
       "integrity": "sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA=="
+    },
+    "@matter-server/ws-client@1.6.0": {
+      "integrity": "sha512-Hut4vul5a2mhKO9SwRnEAhipMzGfJWCUcjrzHs033NqXPHglbQixrigxkEQUmArF6c7LkJ6QkfIsJzpLrMsLlg==",
+      "dependencies": [
+        "@matter/thread-br-client"
+      ]
+    },
+    "@matter/general@0.18.1-alpha.0-20261114-e4326a175": {
+      "integrity": "sha512-NGPuLeN6U9z4i63PCksYdK39Nalb7cQJuk5FsqHL0P1ujPVJeLLbcpPTP3ACOjV13riuCX+WT3dm3sonOSvN5A==",
+      "dependencies": [
+        "@noble/curves",
+        "@noble/hashes",
+        "@noble/post-quantum"
+      ]
+    },
+    "@matter/model@0.18.1-alpha.0-20261114-e4326a175": {
+      "integrity": "sha512-roT0rqNmuPj6JsK1xeXoIv0KBdI1uTjBzhT5feIyoHJEmVILNsRapgFIuidEH8QQKMNnn+bCu/kODfZaW+THRg==",
+      "dependencies": [
+        "@matter/general"
+      ]
+    },
+    "@matter/protocol@0.18.1-alpha.0-20261114-e4326a175": {
+      "integrity": "sha512-5pnejl0q6wDG+47XptdcOaGwEl+Xzr20yKyDWwVVxQUiHntAuoYRdxyN6+DZBIvi9bW5MHJJd/6NQsTPWd4WBA==",
+      "dependencies": [
+        "@matter/general",
+        "@matter/model",
+        "@matter/types"
+      ]
+    },
+    "@matter/thread-br-client@0.18.1-alpha.0-20261114-e4326a175": {
+      "integrity": "sha512-+TOhn/LWfzLcvpaGjxrTt7QYbEszKZUkLtzgFG+Qe6Nk6A7MJ3E8wrAJHgqDlCkTslkBFzqH5dmuIwE625aZqg==",
+      "dependencies": [
+        "@matter/general",
+        "@matter/protocol",
+        "@noble/curves"
+      ]
+    },
+    "@matter/types@0.18.1-alpha.0-20261114-e4326a175": {
+      "integrity": "sha512-kKwCAQBQqxH5b/Y1sa6CdxhiRbawbs8GDtQSUdxv015tJ8S/5XFPJTj96qBRiawv2sNqB3D4GOUlQNdCxwJ60g==",
+      "dependencies": [
+        "@matter/general",
+        "@matter/model"
+      ]
+    },
+    "@noble/ciphers@2.4.0": {
+      "integrity": "sha512-AnjFn0Jv92laAkvMrghlFZq4qQCIN/4DxFV/eooqtC2YTjB7kBeLMS2T9KJX4Dn+ZVXLOwK0lSgqDtx9gvxtiw=="
+    },
+    "@noble/curves@2.4.0": {
+      "integrity": "sha512-P4/62zrgfH33CneE3Dn4WhJVA22YUU0eR51wKIan4NVRvwsA0YnPTwWGpNbpuacSujmSFLvyzpyuR30+fbq2Ew==",
+      "dependencies": [
+        "@noble/hashes"
+      ]
+    },
+    "@noble/hashes@2.4.0": {
+      "integrity": "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="
+    },
+    "@noble/post-quantum@0.7.1": {
+      "integrity": "sha512-+P9981IiAnVh+rmcubozzVwrEy3XsN/tMhTnvsjV9VDaYpOnNCqWqKo2FLWxbu92YHfjGIlE5XnW175UK+ln+Q==",
+      "dependencies": [
+        "@noble/ciphers",
+        "@noble/curves",
+        "@noble/hashes"
+      ]
     },
     "@sec-ant/readable-stream@0.4.1": {
       "integrity": "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="
@@ -1566,6 +1635,8 @@
       "jsr:@std/assert@^1.0.18",
       "jsr:@std/dotenv@~0.225.6",
       "npm:@jamesgopsill/prusa-link@0.1.2",
+      "npm:@matter-server/ws-client@1.6.0",
+      "npm:@matter/model@0.18.1-alpha.0-20261114-e4326a175",
       "npm:color-space@^2.3.2",
       "npm:deepl-node@1.24.0",
       "npm:mqtt@^5.15.0"

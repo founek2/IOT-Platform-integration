@@ -1,0 +1,385 @@
+import SchemaValidator, { string, Type } from "computed_types";
+import { MatterClient, parseBigIntAwareJson, toBigIntAwareJson, type MatterNode, type MatterNodeEvent } from "@matter-server/ws-client";
+import { ComponentType, DeviceCommand, DeviceStatus, Platform, Property, PropertyDataType } from "iot-platform/deno";
+import type { MqttClient } from "mqtt";
+import type { FactoryFn } from "../types.ts";
+import { endpointType, mapEvent, mapProperties, propertyValue, type MatterProperty } from "./matter/mapping.ts";
+
+export const Schema = SchemaValidator({
+    matterUrl: string.optional("ws://192.168.25.5:5580/ws"),
+});
+type MatterConfig = Type<typeof Schema>;
+
+interface DeviceInstance {
+    platform: Platform;
+    signature: string;
+    properties: Map<string, { definition: MatterProperty; property: Property }>;
+}
+
+export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage) => {
+    let matterUrl = bridge.matterUrl;
+    if (matterUrl === undefined) matterUrl = "ws://192.168.25.5:5580/ws";
+    const url = new URL(matterUrl);
+    if (url.protocol !== "ws:" && url.protocol !== "wss:") {
+        throw new Error("Matter server URL must use ws:// or wss://");
+    }
+    const client = new MatterClient(matterUrl, {
+        logger: {
+            debug: () => {},
+            info: (message) => logger.debug(message),
+            warn: (message) => logger.warning(message),
+            error: (message) => logger.error(message),
+        },
+    });
+    const devices = new Map<string, DeviceInstance>();
+    const observedEvents = new Map<string, Map<string, MatterProperty>>();
+    let closing = false;
+    let connected = false;
+    let busy = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let connectTask: Promise<void> | undefined;
+    let queue = Promise.resolve();
+
+    const pairing = new Platform(bridge.id, config.userName, bridge.name, config.mqtt.uri, config.mqtt.port, storage);
+    const pairingNode = pairing.addNode("pairing", "Matter pairing", ComponentType.generic);
+    const status = pairingNode.addProperty({
+        propertyId: "status", name: "Pairing status", dataType: PropertyDataType.string,
+    });
+    const code = pairingNode.addProperty({
+        propertyId: "code", name: "Matter pairing code", dataType: PropertyDataType.string,
+        settable: true, retained: false,
+    });
+
+    // The SDK's standard message listeners log incoming payloads, including pairing codes.
+    code.subscribe = (nodePrefix: string, mqttClient: MqttClient) => {
+        const topic = `${nodePrefix}/${code.propertyId}/set`;
+        mqttClient.subscribe(topic);
+        mqttClient.on("message", (incoming, payload, packet) => {
+            if (incoming !== topic) return;
+            if (packet.retain) {
+                logger.error("Ignoring retained Matter pairing code");
+                status.setValue("Retained pairing codes are not accepted");
+                return;
+            }
+            void commission(payload.toString());
+        });
+    };
+    pairing.connect = () => {
+        if (!pairing.meta) {
+            logger.error("Cannot connect Matter pairing device without an IoT API key");
+            return;
+        }
+        pairing.prefix = `v2/${pairing.userName}`;
+        pairing.createMqttInstance(`device=${pairing.userName}/${pairing.deviceId}`, pairing.meta.apiKey, (mqttClient) => {
+            pairing.publishStatus(DeviceStatus.init);
+            const prefix = pairing.getDevicePrefix();
+            mqttClient.subscribe(`${prefix}/$cmd/set`);
+            pairing.advertise();
+            pairing.nodes.forEach((node) => {
+                node.subscribe(prefix, mqttClient);
+                node.updateClient(prefix, mqttClient);
+            });
+            mqttClient.on("message", (topic, payload) => {
+                if (topic !== `${prefix}/$cmd/set`) return;
+                const command = payload.toString();
+                if (command === DeviceCommand.restart || command === DeviceCommand.reset) {
+                    pairing.publishStatus(DeviceStatus.disconnected);
+                    mqttClient.end();
+                    if (command === DeviceCommand.reset) {
+                        pairing.forgot();
+                        pairing.connectPairing();
+                    } else {
+                        pairing.connect();
+                    }
+                }
+            });
+            mqttClient.on("error", (error) => logger.error("Matter pairing MQTT error", error));
+            mqttClient.on("connect", () => {
+                pairing.emit("connect", mqttClient);
+                pairing.publishStatus(connected ? DeviceStatus.ready : DeviceStatus.disconnected);
+            });
+            mqttClient.on("disconnect", () => pairing.publishStatus(DeviceStatus.lost));
+            pairing.publishStatus(connected ? DeviceStatus.ready : DeviceStatus.disconnected);
+        });
+    };
+    pairing.init();
+
+    async function commission(value: string) {
+        if (busy) {
+            status.setValue("A commissioning attempt is already running");
+            return;
+        }
+        if (!connected || !value.trim()) {
+            status.setValue("Cannot commission: server disconnected or code empty");
+            return;
+        }
+        busy = true;
+        status.setValue("Commissioning");
+        try {
+            await client.commissionWithCode(value.trim(), false);
+            status.setValue("Commissioned");
+        } catch {
+            // Server error details may contain the supplied code.
+            logger.error("Matter commissioning failed; check the Matter Server logs");
+            status.setValue("Commissioning failed; check Matter Server logs");
+        } finally {
+            busy = false;
+        }
+    }
+
+    function enqueue(work: () => Promise<void>) {
+        queue = queue.then(work).catch((error) => {
+            logger.error("Failed to synchronize Matter devices", error);
+            client.disconnect();
+            markDisconnected();
+            reconnect();
+        });
+    }
+
+    function scheduleSync() {
+        enqueue(syncDevices);
+    }
+
+    async function syncDevices() {
+        if (closing || !connected) return;
+        const nodes = client.nodes;
+        for (const [id, instance] of devices) {
+            if (!nodes[id]) {
+                await instance.platform.disconnect();
+                devices.delete(id);
+                observedEvents.delete(id);
+            }
+        }
+        for (const [id, node] of Object.entries(nodes)) {
+            if (closing || !connected) return;
+            const definitions = mapProperties(node, client.serverInfo.schema_version);
+            const events = observedEvents.get(id);
+            if (events) definitions.push(...events.values());
+            const name = node.nodeLabel || node.productName || `Matter ${id}`;
+            const signature = JSON.stringify({ name, definitions });
+            let instance = devices.get(id);
+            if (instance && instance.signature !== signature) {
+                await instance.platform.disconnect();
+                devices.delete(id);
+                instance = undefined;
+            }
+            if (!instance) {
+                if (!definitions.length) logger.warning(`Matter node ${id} has no supported properties`);
+                instance = createDevice(id, node, name, definitions, signature);
+                devices.set(id, instance);
+                try {
+                    instance.platform.init();
+                } catch (error) {
+                    if (instance.platform.client) await instance.platform.disconnect();
+                    devices.delete(id);
+                    throw error;
+                }
+            }
+            publishNode(instance, node);
+        }
+    }
+
+    function createDevice(id: string, node: MatterNode, name: string, definitions: MatterProperty[], signature: string): DeviceInstance {
+        const platform = new Platform(`${bridge.id}-matter-${id}`, config.userName, name,
+            config.mqtt.uri, config.mqtt.port, storage);
+        const properties = new Map<string, { definition: MatterProperty; property: Property }>();
+        const endpoints = new Set(definitions.map((definition) => definition.endpoint));
+        if (!endpoints.size) endpoints.add(0);
+        for (const endpoint of endpoints) {
+            const endpointProperties = definitions.filter((definition) => definition.endpoint === endpoint);
+            const iotNode = platform.addNode(`endpoint${endpoint}`, `Endpoint ${endpoint}`, endpointType(endpointProperties));
+            for (const definition of endpointProperties) {
+                const property = iotNode.addProperty({
+                    propertyId: definition.id, name: definition.name, dataType: definition.type,
+                    propertyClass: definition.propertyClass, unitOfMeasurement: definition.unit,
+                    settable: Boolean(definition.command), format: definition.format,
+                    callback: async (value) => {
+                        try {
+                            if (!connected) throw new Error("Matter server is disconnected");
+                            if (definition.command === "onoff") {
+                                if (value !== "true" && value !== "false") throw new Error("Expected true or false");
+                                await client.deviceCommand(node.node_id, endpoint, 6, value === "true" ? "on" : "off", {});
+                            } else if (definition.command === "level") {
+                                const level = Number(value);
+                                if (!Number.isInteger(level) || level < 0 || level > 254 || !value.trim()) {
+                                    throw new Error("Brightness must be an integer from 0 to 254");
+                                }
+                                await client.deviceCommand(node.node_id, endpoint, 8, "moveToLevel",
+                                    { level, transitionTime: 0, optionsMask: 0, optionsOverride: 0 });
+                            } else if (definition.command === "write") {
+                                let converted: unknown = value;
+                                if (definition.enumValues) {
+                                    if (!Object.hasOwn(definition.enumValues, value)) throw new Error("Invalid enum value");
+                                    converted = definition.enumValues[value];
+                                } else if (definition.type === PropertyDataType.boolean) {
+                                    if (value !== "true" && value !== "false") throw new Error("Expected true or false");
+                                    converted = value === "true";
+                                } else if (definition.wideInteger) {
+                                    if (!/^-?\d+$/.test(value)) throw new Error("Expected an integer");
+                                    converted = BigInt(value);
+                                } else if (definition.jsonKind) {
+                                    converted = parseBigIntAwareJson(value);
+                                    if (definition.jsonKind === "array" && !Array.isArray(converted)) throw new Error("Expected a JSON array");
+                                    if (definition.jsonKind === "object" &&
+                                        (!converted || typeof converted !== "object" || Array.isArray(converted))) throw new Error("Expected a JSON object");
+                                    if (definition.jsonKind === "bitmap" &&
+                                        typeof converted !== "number" && typeof converted !== "bigint") throw new Error("Expected a numeric bitmap");
+                                } else if (definition.type === PropertyDataType.integer || definition.type === PropertyDataType.float) {
+                                    if (!value.trim() || !Number.isFinite(Number(value))) throw new Error("Expected a number");
+                                    let numeric = Number(value);
+                                    if (definition.scale !== undefined) {
+                                        const raw = numeric / definition.scale;
+                                        const rounded = Math.round(raw);
+                                        if (Math.abs(raw - rounded) > 0.000001) throw new Error("Value exceeds Matter precision");
+                                        numeric = rounded;
+                                    }
+                                    if (definition.type === PropertyDataType.integer && !Number.isInteger(numeric)) {
+                                        throw new Error("Expected an integer");
+                                    }
+                                    converted = numeric;
+                                }
+                                const results = definition.atomic
+                                    ? await client.writeAtomicAttribute(node.node_id, definition.path, converted, undefined, {
+                                        skipDataVersionCheck: true, timedRequestTimeoutMs: definition.timed ? 10000 : undefined,
+                                    })
+                                    : await client.writeAttribute(node.node_id, definition.path, converted,
+                                        definition.timed ? { timedRequestTimeoutMs: 10000 } : undefined);
+                                if (!results || results.length !== 1 || results[0].Status !== 0) {
+                                    throw new Error("Matter attribute write was rejected");
+                                }
+                            } else if (definition.command === "invoke") {
+                                const payload = parseBigIntAwareJson(value.trim() || "{}");
+                                if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+                                    throw new Error("Command payload must be a JSON object");
+                                }
+                                if (definition.cluster === undefined || !definition.commandName) {
+                                    throw new Error("Missing command metadata");
+                                }
+                                await client.deviceCommand(node.node_id, endpoint, definition.cluster,
+                                    definition.commandName, Object.fromEntries(Object.entries(payload)),
+                                    definition.timed ? { timedRequestTimeoutMs: 10000 } : undefined);
+                            }
+                        } catch (error) {
+                            logger.error(`Matter command failed for node ${id} property ${definition.id}`, error);
+                        }
+                        return false;
+                    },
+                });
+                properties.set(definition.path, { definition, property });
+            }
+        }
+        platform.on("connect", () => {
+            const latest = client.nodes[id];
+            if (latest) publishNode({ platform, signature, properties }, latest);
+        });
+        return { platform, signature, properties };
+    }
+
+    function publishNode(instance: DeviceInstance, node: MatterNode) {
+        instance.platform.publishStatus(connected && node.available ? DeviceStatus.ready : DeviceStatus.disconnected);
+        for (const [path, { definition, property }] of instance.properties) {
+            const value = propertyValue(definition, node.attributes[path]);
+            if (value !== undefined) property.setValue(value);
+            else if (node.attributes[path] === null) property.setValue("");
+        }
+    }
+
+    function markDisconnected() {
+        connected = false;
+        if (pairing.client) pairing.publishStatus(DeviceStatus.disconnected);
+        for (const { platform } of devices.values()) {
+            if (platform.client) platform.publishStatus(DeviceStatus.disconnected);
+        }
+    }
+
+    function reconnect() {
+        if (closing || reconnectTimer) return;
+        reconnectTimer = setTimeout(() => {
+            reconnectTimer = undefined;
+            start();
+        }, 5000);
+    }
+
+    function start() {
+        if (closing || connectTask) return;
+        connectTask = (async () => {
+            try {
+                await client.startListening();
+                if (closing || !client.connection.connected) return;
+                connected = true;
+                pairing.publishStatus(DeviceStatus.ready);
+                scheduleSync();
+            } catch (error) {
+                if (!closing) logger.error("Failed to connect to Matter Server", error);
+                client.disconnect();
+                client.connection.disconnect();
+                markDisconnected();
+                reconnect();
+            } finally {
+                connectTask = undefined;
+            }
+        })();
+    }
+
+    client.addEventListener("nodes_changed", scheduleSync);
+    client.addNodeEventListener((event: MatterNodeEvent) => {
+        if (closing || !connected) return;
+        const id = String(event.node_id);
+        const definition = mapEvent(event.endpoint_id, event.cluster_id, event.event_id);
+        if (!definition) {
+            logger.warning(`Unsupported Matter event ${event.endpoint_id}/${event.cluster_id}/${event.event_id} on node ${id}`);
+            return;
+        }
+        let events = observedEvents.get(id);
+        if (!events) {
+            events = new Map();
+            observedEvents.set(id, events);
+        }
+        events.set(definition.path, definition);
+        enqueue(async () => {
+            await syncDevices();
+            const property = devices.get(id)?.properties.get(definition.path)?.property;
+            if (!property || !connected) {
+                logger.warning(`Could not forward Matter event on node ${id}`);
+                return;
+            }
+            property.setValue(toBigIntAwareJson({
+                event_number: event.event_number, timestamp: event.timestamp, timestamp_type: event.timestamp_type,
+                data: event.data,
+            }));
+            property.value = undefined;
+        });
+    });
+    client.addEventListener("connection_lost", () => {
+        if (closing) return;
+        markDisconnected();
+        reconnect();
+    });
+    client.addEventListener("server_shutdown", () => {
+        if (closing) return;
+        markDisconnected();
+        reconnect();
+    });
+    start();
+
+    return {
+        async cleanUp() {
+            closing = true;
+            if (reconnectTimer) clearTimeout(reconnectTimer);
+            client.disconnect();
+            client.connection.disconnect();
+            if (connectTask) await connectTask;
+            await queue;
+            const platforms = [pairing, ...Array.from(devices.values(), (device) => device.platform)];
+            const results = await Promise.allSettled(platforms.filter((platform) => platform.client).map((platform) => platform.disconnect()));
+            const errors = results.filter((result) => result.status === "rejected").map((result) => result.reason);
+            if (errors.length) throw new AggregateError(errors, "Failed to disconnect Matter devices");
+        },
+        healthCheck() {
+            return [pairing, ...Array.from(devices.values(), (device) => device.platform)].map((platform) => ({
+                deviceId: platform.deviceId,
+                connected: Boolean(platform.client && platform.client.connected && connected),
+            }));
+        },
+    };
+};

@@ -36,6 +36,9 @@ interface Hooks {
     translate?: () => Promise<void>;
     end?: (client: MqttClient) => void | Promise<void>;
     publish?: (client: MqttClient, topic: string) => void;
+    prefix?: string;
+    guest?: boolean;
+    publishError?: Error;
 }
 
 async function withBridge(
@@ -57,6 +60,7 @@ async function withBridge(
         connect: prototype.connect,
         publish: prototype.publish,
         subscribe: prototype.subscribe,
+        end: prototype.end,
         endAsync: prototype.endAsync,
         translate: Object.getOwnPropertyDescriptor(deepl.Translator.prototype, "translateText")!,
     };
@@ -84,12 +88,24 @@ async function withBridge(
         events.push(`connect:${id}`);
         return this;
     };
-    prototype.publish = function (topic, payload) {
+    prototype.publish = function (
+        topic: string,
+        payload: string | Buffer,
+        options?: Parameters<MqttClient["publish"]>[2] | Parameters<MqttClient["publish"]>[3],
+        callback?: Parameters<MqttClient["publish"]>[3],
+    ) {
         publications.push({ client: this, topic, payload: payload.toString() });
         hooks.publish?.(this, topic);
+        const done = typeof options === "function" ? options : callback;
+        if (done) done(topic.endsWith("/bridge/request/permit_join") ? hooks.publishError : undefined);
         return this;
     };
     prototype.subscribe = function () { return this; };
+    prototype.end = function () {
+        this.connected = false;
+        this.disconnected = true;
+        return this;
+    };
     prototype.endAsync = async function () {
         await hooks.end?.(this);
         this.connected = false;
@@ -107,6 +123,7 @@ async function withBridge(
 
     let bridge: Awaited<ReturnType<typeof factory>> | undefined;
     try {
+        const prefix = hooks.prefix || "zigbee2mqtt";
         bridge = await factory(
             { userName: "test", mqtt: { uri: "mqtt://localhost", port: 1883 } },
             {
@@ -114,11 +131,11 @@ async function withBridge(
                 name: "Zigbee",
                 type: "zigbee2mqtt",
                 deeplApiKey: "test-api-key:fx",
-                zigbeeMqtt: { uri: "mqtt://localhost", port: 1883, prefix: "zigbee2mqtt" },
+                zigbeeMqtt: { uri: "mqtt://localhost", port: 1883, prefix },
             },
             logger,
             {
-                getItem: () => JSON.stringify({ apiKey: "test" }),
+                getItem: () => hooks.guest ? null : JSON.stringify({ apiKey: "test" }),
                 setItem: () => {},
                 removeItem: () => {},
             },
@@ -128,9 +145,10 @@ async function withBridge(
                 cmd: "publish", topic, payload: Buffer.alloc(0), qos: 0, dup: false, retain: false,
             });
         };
+        message(`${prefix}/bridge/state`, { state: "online" });
         await test({
             bridge,
-            send: (devices) => message("zigbee2mqtt/bridge/devices", devices),
+            send: (devices) => message(`${prefix}/bridge/devices`, devices),
             message, clients, errors, debug, publications, events, conflicts,
         });
     } finally {
@@ -140,6 +158,7 @@ async function withBridge(
             prototype.connect = originals.connect;
             prototype.publish = originals.publish;
             prototype.subscribe = originals.subscribe;
+            prototype.end = originals.end;
             prototype.endAsync = originals.endAsync;
             Object.defineProperty(deepl.Translator.prototype, "translateText", originals.translate);
         }
@@ -165,7 +184,7 @@ Deno.test("devices initialize in parallel while rebuilds remain sequential", asy
         } finally {
             gate.resolve();
         }
-        await waitFor(() => debug.filter(([text]) => text === "Refreshing devices").length === 2 && clients.length === 5);
+        await waitFor(() => debug.filter(([text]) => text === "Refreshing devices").length === 2 && clients.length === 6);
         await bridge.cleanUp();
         assert(clients.every((client) => !client.connected));
         assert.deepEqual(conflicts, []);
@@ -197,7 +216,7 @@ Deno.test("failed parallel builds wait for pending devices before cleanup", asyn
         } finally {
             gate.resolve();
         }
-        await waitFor(() => errors.length === 1 && clients.length === 7);
+        await waitFor(() => errors.length === 1 && clients.length === 8);
         assert(events.indexOf("end:mqttjs_three") < events.lastIndexOf("connect:mqttjs_one"));
         await bridge.cleanUp();
         assert(clients.every((client) => !client.connected));
@@ -226,15 +245,16 @@ Deno.test("device updates rebuild sequentially and skip queued identical lists",
         }
         await waitFor(() => debug.some(([text]) => text === "Fingerprint matches, skipping refresh"));
 
-        assert.deepEqual(events.slice(1), [
+        assert.deepEqual(events.slice(2), [
             "connect:mqttjs_one", "connect:mqttjs_two",
             "end:mqttjs_one", "end:mqttjs_two",
             "connect:mqttjs_one", "connect:mqttjs_two",
         ]);
-        assert.equal(clients.length, 5);
+        assert.equal(clients.length, 6);
         assert.deepEqual(conflicts, []);
         assert.deepEqual(errors, []);
         assert.deepEqual(bridge.healthCheck(), [
+            { deviceId: "zigbee", connected: true },
             { deviceId: "one", connected: true },
             { deviceId: "two", connected: true },
         ]);
@@ -243,7 +263,7 @@ Deno.test("device updates rebuild sequentially and skip queued identical lists",
         message("zigbee2mqtt/one", { temperature: 22 });
         assert.equal(publications.at(-1)?.topic, "v2/test/one/node/temperature");
         assert.equal(publications.at(-1)?.payload, "22");
-        clients[3].emit("message", "v2/test/one/node/temperature/set", Buffer.from("25"), {
+        clients[4].emit("message", "v2/test/one/node/temperature/set", Buffer.from("25"), {
             cmd: "publish", topic: "v2/test/one/node/temperature/set",
             payload: Buffer.from("25"), qos: 0, dup: false, retain: false,
         });
@@ -264,12 +284,12 @@ Deno.test("a failed partial build is disconnected and an identical update retrie
     }, async ({ bridge, send, clients, errors, conflicts }) => {
         send([device("one"), device("two")]);
         await waitFor(() => errors.length === 1);
-        assert.equal(clients.length, 3);
-        assert(clients.slice(1).every((client) => !client.connected));
-        assert.deepEqual(bridge.healthCheck(), []);
+        assert.equal(clients.length, 4);
+        assert(clients.slice(2).every((client) => !client.connected));
+        assert.deepEqual(bridge.healthCheck(), [{ deviceId: "zigbee", connected: true }]);
 
         send([device("one"), device("two")]);
-        await waitFor(() => clients.length === 5);
+        await waitFor(() => clients.length === 6);
         await bridge.cleanUp();
         assert(clients.every((client) => !client.connected));
         assert.deepEqual(conflicts, []);
@@ -295,7 +315,7 @@ Deno.test("shutdown waits for an active build, drops queued updates and ignores 
         gate.resolve();
         await cleanup;
         await bridge.cleanUp();
-        assert.equal(clients.length, 3);
+        assert.equal(clients.length, 4);
         assert(clients.every((client) => !client.connected));
         assert.deepEqual(errors, []);
     });
@@ -320,16 +340,17 @@ Deno.test("failed partial-build cleanup keeps clients tracked for the next retry
         send([device("one"), device("two")]);
         await waitFor(() => errors.length === 1);
         assert(errors[0][1] instanceof AggregateError);
-        assert.equal(clients[1].connected, true);
-        assert.equal(clients[2].connected, false);
+        assert.equal(clients[2].connected, true);
+        assert.equal(clients[3].connected, false);
         assert.deepEqual(bridge.healthCheck(), [
+            { deviceId: "zigbee", connected: true },
             { deviceId: "one", connected: true },
             { deviceId: "two", connected: false },
         ]);
 
         failCleanup = false;
         send([device("one"), device("two")]);
-        await waitFor(() => clients.length === 5);
+        await waitFor(() => clients.length === 6);
         await bridge.cleanUp();
         assert(clients.every((client) => !client.connected));
         assert.deepEqual(conflicts, []);
@@ -352,22 +373,22 @@ Deno.test("a failed disconnect prevents replacement clients until a later succes
         },
     }, async ({ bridge, send, clients, errors, events, conflicts }) => {
         send([device("one"), device("two")]);
-        await waitFor(() => clients.length === 3);
+        await waitFor(() => clients.length === 4);
         send([device("one", "updated"), device("two", "updated")]);
         await waitFor(() => secondClosing);
         try {
             assert.equal(errors.length, 0, "Shutdown must settle every client before reporting failure");
-            assert.equal(clients.length, 3);
+            assert.equal(clients.length, 4);
         } finally {
             gate.resolve();
         }
         await waitFor(() => errors.length === 1);
-        assert.equal(clients.length, 3);
+        assert.equal(clients.length, 4);
         assert(events.includes("end:mqttjs_two"));
 
         fail = false;
         send([device("one"), device("two")]);
-        await waitFor(() => clients.length === 5);
+        await waitFor(() => clients.length === 6);
         await bridge.cleanUp();
         assert(clients.every((client) => !client.connected));
         assert.deepEqual(conflicts, []);
@@ -378,9 +399,103 @@ Deno.test("malformed device lists are logged without blocking the next rebuild",
     await withBridge({}, async ({ bridge, send, message, clients, errors }) => {
         message("zigbee2mqtt/bridge/devices", null);
         send([device("one")]);
-        await waitFor(() => clients.length === 2);
+        await waitFor(() => clients.length === 3);
         await bridge.cleanUp();
         assert.equal(errors.length, 1);
         assert.equal(errors[0][0], "Failed to refresh Zigbee devices");
+    });
+});
+
+function setPairing(client: MqttClient, value: string) {
+    const topic = "v2/test/zigbee/pairing/power/set";
+    client.emit("message", topic, Buffer.from(value), {
+        cmd: "publish", topic, payload: Buffer.from(value), qos: 0, dup: false, retain: false,
+    });
+}
+
+Deno.test("pairing switch follows Zigbee2MQTT state across requests, expiry and rebuilds", async () => {
+    await withBridge({ prefix: "custom/zigbee" }, async ({ bridge, send, message, clients, publications, errors, debug }) => {
+        const topic = "v2/test/zigbee/pairing/power";
+        const requests = () => publications.filter((entry) => entry.topic === "custom/zigbee/bridge/request/permit_join");
+        const values = () => publications.filter((entry) => entry.topic === topic).map((entry) => entry.payload);
+
+        assert(publications.some((entry) => entry.topic === "v2/test/zigbee/pairing/$type" && entry.payload === "switch"));
+        message("custom/zigbee/bridge/info", { permit_join: false, config: { password: "hidden" } });
+        assert(!JSON.stringify(debug).includes("hidden"));
+        assert.deepEqual(values(), ["false"]);
+        setPairing(clients[1], "true");
+        await Promise.resolve();
+        assert.equal(requests().at(-1)?.payload, '{"time":254}');
+        assert.deepEqual(values(), ["false"], "Requests must not optimistically change the switch");
+        message("custom/zigbee/bridge/info", { permit_join: true });
+        assert.deepEqual(values(), ["false", "true"]);
+        send([device("one")]);
+        await waitFor(() => clients.length === 3);
+        assert.equal(clients[1].connected, true, "Device rebuilds must not disconnect the pairing device");
+        message("custom/zigbee/bridge/info", { permit_join: false });
+        assert.equal(values().at(-1), "false", "Expiry or external changes must update the switch");
+        setPairing(clients[1], "false");
+        await Promise.resolve();
+        assert.equal(requests().at(-1)?.payload, '{"time":0}');
+        assert.deepEqual(errors, []);
+        await bridge.cleanUp();
+        assert(clients.every((client) => !client.connected));
+    });
+});
+
+Deno.test("pairing rejects invalid or unavailable requests and reports failures", async () => {
+    await withBridge({ publishError: new Error("Publish failed") }, async ({ bridge, message, clients, errors, publications, debug }) => {
+        const pairingClient = clients[1];
+        const requestTopic = "zigbee2mqtt/bridge/request/permit_join";
+        message("zigbee2mqtt/bridge/info", { permit_join: false });
+        setPairing(pairingClient, "invalid");
+        message("zigbee2mqtt/bridge/state", { state: "offline" });
+        setPairing(pairingClient, "true");
+        assert.equal(publications.filter((entry) => entry.topic === requestTopic).length, 0);
+        assert.deepEqual(bridge.healthCheck(), [{ deviceId: "zigbee", connected: false }]);
+
+        message("zigbee2mqtt/bridge/state", { state: "online" });
+        setPairing(pairingClient, "true");
+        message("zigbee2mqtt/bridge/response/permit_join", { status: "error", error: "Rejected" });
+        message("zigbee2mqtt/bridge/info", { permit_join: "true", config: { password: "hidden" } });
+        clients[0].emit("message", "zigbee2mqtt/bridge/info", Buffer.from('{"password":"hidden"'), {
+            cmd: "publish", topic: "zigbee2mqtt/bridge/info", payload: Buffer.alloc(0), qos: 0, dup: false, retain: false,
+        });
+        await Promise.resolve();
+        assert.equal(publications.filter((entry) => entry.topic === "v2/test/zigbee/pairing/power").at(-1)?.payload, "false");
+        assert.deepEqual(errors.map((entry) => entry[0]), [
+            "Invalid Zigbee pairing switch value",
+            "Cannot change Zigbee pairing: Zigbee2MQTT is disconnected",
+            "Failed to publish Zigbee pairing request",
+            "Zigbee2MQTT rejected pairing request",
+            "Zigbee2MQTT bridge info is missing permit_join",
+            "Invalid Zigbee2MQTT message on zigbee2mqtt/bridge/info",
+        ]);
+        assert(!JSON.stringify([...debug, ...errors]).includes("hidden"));
+        clients[0].connected = false;
+        clients[0].emit("close");
+        assert.deepEqual(bridge.healthCheck(), [{ deviceId: "zigbee", connected: false }]);
+        pairingClient.emit("reconnect");
+        assert.equal(publications.filter((entry) => entry.topic === "v2/test/zigbee/$state").at(-1)?.payload, "disconnected");
+        setPairing(pairingClient, "true");
+        assert.equal(publications.filter((entry) => entry.topic === requestTopic).length, 1);
+        clients[0].connected = true;
+        message("zigbee2mqtt/bridge/state", { state: "online" });
+        message("zigbee2mqtt/bridge/info", { permit_join: true });
+        assert.deepEqual(bridge.healthCheck(), [{ deviceId: "zigbee", connected: true }]);
+        assert.equal(publications.filter((entry) => entry.topic === "v2/test/zigbee/pairing/power").at(-1)?.payload, "true");
+    });
+});
+
+Deno.test("pairing switch caches state before the control device is paired", async () => {
+    await withBridge({ guest: true }, async ({ message, clients, publications }) => {
+        message("zigbee2mqtt/bridge/info", { permit_join: true });
+        assert.equal(publications.filter((entry) => entry.topic === "prefix/zigbee/pairing/power").at(-1)?.payload, "true");
+        const topic = "prefix/zigbee/$config/apiKey/set";
+        clients[1].emit("message", topic, Buffer.from("test"), {
+            cmd: "publish", topic, payload: Buffer.from("test"), qos: 0, dup: false, retain: false,
+        });
+        assert.equal(clients.length, 3);
+        assert.equal(publications.filter((entry) => entry.topic === "v2/test/zigbee/pairing/power").at(-1)?.payload, "true");
     });
 });

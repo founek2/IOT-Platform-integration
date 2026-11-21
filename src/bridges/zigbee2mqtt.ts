@@ -1,5 +1,5 @@
 import SchemaValidator, { Type, string, number, array } from 'computed_types';
-import { Platform, DeviceStatus, PropertyDataType } from "iot-platform/deno"
+import { Platform, DeviceStatus, PropertyDataType, ComponentType } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
 import mqtt from "mqtt";
 import { DeviceTransformed, TransformedExpose } from "./zigbee2mqtt/convertor.ts"
@@ -42,6 +42,7 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
     let refreshQueue = Promise.resolve();
     let closing = false;
     let cleanupPromise: Promise<void> | undefined;
+    let zigbeeOnline = false;
 
     const zigbeeClient = mqtt.connect(bridge.zigbeeMqtt.uri, {
         port: bridge.zigbeeMqtt.port,
@@ -49,6 +50,50 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
         username: bridge.zigbeeMqtt.username,
         password: bridge.zigbeeMqtt.password,
     });
+
+    const pairing = new Platform(bridge.id, config.userName, bridge.name, config.mqtt.uri, config.mqtt.port, storage);
+    const pairingNode = pairing.addNode("pairing", "Pairing", ComponentType.switch);
+    const permitJoin = pairingNode.addProperty({
+        propertyId: "power",
+        name: "Allow joining",
+        dataType: PropertyDataType.boolean,
+        settable: true,
+        callback: (value) => {
+            if (value !== "true" && value !== "false") {
+                logger.error("Invalid Zigbee pairing switch value");
+                return false;
+            }
+            if (!zigbeeClient.connected || !zigbeeOnline || closing) {
+                logger.error("Cannot change Zigbee pairing: Zigbee2MQTT is disconnected");
+                return false;
+            }
+            try {
+                zigbeeClient.publish(
+                    `${bridge.zigbeeMqtt.prefix}/bridge/request/permit_join`,
+                    JSON.stringify({ time: value === "true" ? 254 : 0 }),
+                    (error) => {
+                        if (error) logger.error("Failed to publish Zigbee pairing request", error);
+                    },
+                );
+            } catch (error) {
+                logger.error("Failed to publish Zigbee pairing request", error);
+            }
+            return false;
+        },
+    });
+    const createPairingClient = pairing.createMqttInstance;
+    pairing.createMqttInstance = (username, password, applyListeners) => {
+        createPairingClient(username, password, (client) => {
+            applyListeners(client);
+            const updateStatus = () => {
+                if (!closing) pairing.publishStatus(zigbeeClient.connected && zigbeeOnline ? DeviceStatus.ready : DeviceStatus.disconnected);
+            };
+            client.on("connect", updateStatus);
+            client.on("reconnect", updateStatus);
+        });
+    };
+    pairing.init();
+    pairing.publishStatus(DeviceStatus.disconnected);
 
     zigbeeClient.on("connect", function () {
         logger.debug("connected");
@@ -63,10 +108,49 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
     zigbeeClient.on("disconnect", function () {
         logger.debug("zigbeeClient disconnected");
     });
+    zigbeeClient.on("close", () => {
+        zigbeeOnline = false;
+        if (!closing) pairing.publishStatus(DeviceStatus.disconnected);
+    });
 
     zigbeeClient.on("message", function (topic, message) {
         if (closing) return;
-        if (!topic.includes("logging") && !topic.startsWith("zigbee2mqtt/bridge/")) logger.debug("message", topic, message.toString());
+        if (!topic.includes("logging") && !topic.startsWith(`${bridge.zigbeeMqtt.prefix}/bridge/`)) logger.debug("message", topic, message.toString());
+
+        if (topic === `${bridge.zigbeeMqtt.prefix}/bridge/info` ||
+            topic === `${bridge.zigbeeMqtt.prefix}/bridge/state` ||
+            topic === `${bridge.zigbeeMqtt.prefix}/bridge/response/permit_join`) {
+            let data: unknown;
+            try {
+                data = JSON.parse(message.toString());
+            } catch {
+                logger.error(`Invalid Zigbee2MQTT message on ${topic}`);
+                return;
+            }
+            if (!data || typeof data !== "object") {
+                logger.error(`Invalid Zigbee2MQTT message on ${topic}`);
+                return;
+            }
+            if (topic.endsWith("/bridge/info")) {
+                if (!("permit_join" in data) || typeof data.permit_join !== "boolean") {
+                    logger.error("Zigbee2MQTT bridge info is missing permit_join");
+                    return;
+                }
+                permitJoin.setValue(String(data.permit_join));
+            } else if (topic.endsWith("/bridge/state")) {
+                if (!("state" in data) || (data.state !== "online" && data.state !== "offline")) {
+                    logger.error("Invalid Zigbee2MQTT bridge state");
+                    return;
+                }
+                zigbeeOnline = data.state === "online";
+                pairing.publishStatus(zigbeeOnline ? DeviceStatus.ready : DeviceStatus.disconnected);
+            } else if ("status" in data && data.status === "error") {
+                logger.error("Zigbee2MQTT rejected pairing request", "error" in data ? data.error : "Unknown error");
+            } else if (!("status" in data) || data.status !== "ok") {
+                logger.error("Invalid Zigbee2MQTT pairing response");
+            }
+            return;
+        }
 
         const handle = topicParser(topic, message);
 
@@ -198,24 +282,26 @@ export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, l
 
             cleanupPromise = (async () => {
                 await refreshQueue;
-                try {
-                    await shutdownDevices(instances);
-                    instances = [];
-                } finally {
-                    await zigbeeClient.endAsync();
-                }
+                const results = await Promise.allSettled([
+                    shutdownDevices(instances),
+                    pairing.disconnect(),
+                    zigbeeClient.endAsync(),
+                ]);
+                const errors = results.filter((result) => result.status === "rejected").map((result) => result.reason);
+                if (errors.length) throw new AggregateError(errors, "Failed to shut down Zigbee bridge");
+                instances = [];
             })();
             return cleanupPromise;
         },
         healthCheck: function () {
-            return instances.map((plat) => {
+            return [pairing, ...instances].map((plat) => {
                 let connected = false;
                 if (plat.client) {
                     connected = plat.client.connected;
                 }
                 return {
                     deviceId: plat.deviceId,
-                    connected
+                    connected: plat === pairing ? connected && zigbeeClient.connected && zigbeeOnline : connected
                 };
             })
         }

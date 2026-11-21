@@ -31,6 +31,11 @@ bridges:
     # !! Support for webrtc (go2rtc) and mp4
     # frigateStreamUrl: https://kamery.home.iotdomu.cz/api/frame.mp4
     # frigateStreamUrl: https://kamery.home.iotdomu.cz/live/webrtc/stream.html
+  BRIDGE_MATTER:
+    name: 'Matter'
+    type: matter
+    # Matter Server WebSocket endpoint
+    matterUrl: ws://192.168.25.5:5580/ws
 devices:
   BOT-SPA98190:
     name: Výřivka
