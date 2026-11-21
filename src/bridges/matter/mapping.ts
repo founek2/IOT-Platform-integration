@@ -178,6 +178,7 @@ export function mapProperties(node: MatterNode, schemaVersion = 15): MatterPrope
         const clusterId = Number(match[2]);
         const cluster = clusters.get(clusterId);
         if (!cluster || cluster.effectiveClassification !== "application") continue;
+        if (clusterId === 6 && result.some((property) => property.endpoint === endpoint && property.command === "onoff")) continue;
         for (const model of cluster.allAces) {
             if (!(model instanceof CommandModel) || model.direction !== "request" ||
                 !accepted.includes(model.id) || containsSecret(model)) continue;

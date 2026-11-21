@@ -62,8 +62,10 @@ attributes can be set; structured values use JSON and bitmaps use their numeric
 value. Advertised commands are
 available as string properties accepting a JSON object with the command's
 Matter field names (use `{}` for a command without arguments). On/off and
-brightness also have dedicated controls. Observed standard events, such as
-button presses, are exposed as non-retained JSON event properties; the first
+brightness also have dedicated controls. When an on/off switch is available,
+the On/Off cluster's JSON commands are not exposed separately. Observed
+standard events, such as button presses, are exposed as non-retained JSON event
+properties; the first
 event of a new type creates its property. Property labels use the cluster name,
 with a `min`, `max` or `Uncertainty` suffix where applicable. Other attributes,
 commands or events in a cluster can share a label; their property IDs remain distinct.

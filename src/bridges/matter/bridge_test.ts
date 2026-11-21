@@ -65,6 +65,7 @@ Deno.test("maps discovered standard attributes, controls and their Matter metada
     assert.equal(byPath("1/1037/7").name, "Carbon Dioxide Concentration Measurement - Uncertainty");
     assert.equal(byPath("1/1066/0").unit, "µg/m³");
     assert.equal(byPath("1/6/0").command, "onoff");
+    assert.ok(!properties.some((item) => item.path.startsWith("1/6/command/")));
     assert.equal(propertyValue(byPath("1/1037/0"), null), undefined);
     assert.equal(byPath("2/513/18").command, "write");
     assert.equal(propertyValue(byPath("2/513/18"), 2200), "22");
@@ -80,6 +81,24 @@ Deno.test("maps discovered standard attributes, controls and their Matter metada
         ...sensorData, attributes: { "1/1030/0": { "0": true } },
     }))[0];
     assert.equal(propertyValue(occupancy, { "0": true }), "true");
+});
+
+Deno.test("On/Off commands remain available when an endpoint has no on/off switch", () => {
+    const node = new MatterNode({
+        ...sensorData,
+        attributes: {
+            "1/6/0": true,
+            "1/6/65529": [0, 1, 2, 66],
+            "2/6/0": false,
+            "2/6/65529": [0],
+            "3/6/65529": [0, 1],
+        },
+    });
+    const properties = mapProperties(node);
+    assert.ok(properties.some((item) => item.path === "1/6/0" && item.command === "onoff"));
+    assert.ok(!properties.some((item) => item.path.startsWith("1/6/command/")));
+    assert.ok(properties.some((item) => item.path === "2/6/command/0"));
+    assert.ok(properties.some((item) => item.path === "3/6/command/1"));
 });
 
 Deno.test({
@@ -143,6 +162,7 @@ Deno.test({
             );
             await waitFor(() => clients.length === 2);
             await waitFor(() => publications.some((p) => p.topic.endsWith("/e1-c1037-a0") && p.value === "2111"));
+            assert.ok(!publications.some((p) => p.topic.includes("/endpoint1/e1-c6-cmd")));
             const device = clients.find((client) => client.options.clientId === "mqttjs_matter-matter-1");
             const pairing = clients.find((client) => client.options.clientId === "mqttjs_matter");
             assert.ok(device);
