@@ -19,8 +19,13 @@ const sensorData = {
         "1/6/0": true,
         "1/6/65529": [0, 1, 2],
         "1/1026/0": 2439,
+        "1/1026/1": -4000,
+        "1/1026/2": 12500,
+        "1/1026/3": 100,
+        "1/1024/0": 10000,
         "1/1029/0": 5060,
         "1/1037/0": 2111,
+        "1/1037/7": 0.1,
         "1/1037/8": 0,
         "1/1066/0": 5,
         "1/1066/8": 4,
@@ -50,8 +55,14 @@ Deno.test("maps discovered standard attributes, controls and their Matter metada
         return property;
     };
     assert.equal(propertyValue(byPath("1/1026/0"), 2439), "24.39");
+    assert.equal(byPath("1/1026/0").name, "Temperature Measurement");
+    assert.equal(byPath("1/1026/1").name, "Temperature Measurement - min");
+    assert.equal(byPath("1/1026/2").name, "Temperature Measurement - max");
+    assert.equal(byPath("1/1026/3").name, "Temperature Measurement");
+    assert.equal(byPath("1/1024/0").name, "Illuminance Measurement");
     assert.equal(propertyValue(byPath("1/1029/0"), 5060), "50.6");
     assert.equal(byPath("1/1037/0").unit, "ppm");
+    assert.equal(byPath("1/1037/7").name, "Carbon Dioxide Concentration Measurement - Uncertainty");
     assert.equal(byPath("1/1066/0").unit, "µg/m³");
     assert.equal(byPath("1/6/0").command, "onoff");
     assert.equal(propertyValue(byPath("1/1037/0"), null), undefined);
@@ -59,11 +70,12 @@ Deno.test("maps discovered standard attributes, controls and their Matter metada
     assert.equal(propertyValue(byPath("2/513/18"), 2200), "22");
     assert.equal(propertyValue(byPath("2/513/28"), 4), "Heat");
     assert.equal(byPath("2/258/command/5").commandName, "goToLiftPercentage");
+    assert.equal(byPath("2/258/command/5").name, "Window Covering");
     assert.equal(byPath("2/513/80").atomic, true);
     assert.equal(mapProperties(new MatterNode(sensorData), 14).find((item) => item.path === "2/513/80")?.command, undefined);
     assert.ok(!properties.some((item) => item.path.startsWith("2/257/command/")));
     assert.ok(!properties.some((item) => item.path === "0/49/6"));
-    assert.equal(mapEvent(1, 59, 1)?.name, "Switch - Initial Press (event)");
+    assert.equal(mapEvent(1, 59, 1)?.name, "Switch");
     const occupancy = mapProperties(new MatterNode({
         ...sensorData, attributes: { "1/1030/0": { "0": true } },
     }))[0];

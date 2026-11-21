@@ -29,6 +29,19 @@ function humanName(name: string) {
     return name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Z])([A-Z][a-z])/g, "$1 $2");
 }
 
+function propertyName(clusterName: string, modelName: string) {
+    const name = humanName(clusterName);
+    const matches = humanName(modelName).match(/\b(?:min(?:imum)?|max(?:imum)?|uncertainty)\b/gi);
+    if (!matches) return name;
+    const suffixes = [...new Set(matches.map((match) => {
+        const lower = match.toLowerCase();
+        if (lower.startsWith("min")) return "min";
+        if (lower.startsWith("max")) return "max";
+        return "Uncertainty";
+    }))];
+    return `${name} - ${suffixes.join("/")}`;
+}
+
 function enumValues(model: ValueModel): Record<string, number> | undefined {
     const values: Record<string, number> = {};
     for (const member of model.definingModel?.children || []) {
@@ -131,7 +144,7 @@ export function mapProperties(node: MatterNode, schemaVersion = 15): MatterPrope
         }
         const property: MatterProperty = {
             path, endpoint, cluster: clusterId, id: `e${endpoint}-c${clusterId}-a${attributeId}`,
-            name: `${humanName(cluster.name)} - ${humanName(model.name)}`, type,
+            name: propertyName(cluster.name, model.name), type,
         };
         if (model.effectiveMetatype === Metatype.integer && type === PropertyDataType.string) property.wideInteger = true;
         if (model.effectiveMetatype === Metatype.array || model.effectiveMetatype === Metatype.object ||
@@ -171,7 +184,7 @@ export function mapProperties(node: MatterNode, schemaVersion = 15): MatterPrope
             result.push({
                 path: `${endpoint}/${clusterId}/command/${model.id}`, endpoint, cluster: clusterId,
                 id: `e${endpoint}-c${clusterId}-cmd${model.id}`,
-                name: `${humanName(cluster.name)} - ${humanName(model.name)} (JSON)`,
+                name: propertyName(cluster.name, model.name),
                 type: PropertyDataType.string, command: "invoke", commandName: model.propertyName,
                 timed: model.effectiveAccess.timed || undefined,
             });
@@ -188,7 +201,7 @@ export function mapEvent(endpoint: number, clusterId: number, eventId: number): 
     return {
         path: `${endpoint}/${clusterId}/event/${eventId}`, endpoint, cluster: clusterId,
         id: `e${endpoint}-c${clusterId}-event${eventId}`,
-        name: `${humanName(cluster.name)} - ${humanName(model.name)} (event)`, type: PropertyDataType.string,
+        name: propertyName(cluster.name, model.name), type: PropertyDataType.string,
     };
 }
 
