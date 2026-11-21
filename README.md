@@ -53,7 +53,10 @@ the code as a property value or log it, and ignores retained code messages.
 Pairing codes still pass through the IoT Platform and MQTT broker: protect their
 traffic, logs, access and storage; do not retain the command message.
 
-Each Matter endpoint becomes an IoT node. Matter Server supplies the actual
+Each Matter endpoint becomes an IoT node named after its reported standard
+device type, or `Endpoint N` when no known type is available. If multiple types
+are reported, application types take precedence over utility types. Its time
+controls share a separate time node. Matter Server supplies the actual
 attribute paths and accepted commands, while the standard Matter data model
 supplies their names, types, enum values and access rights. Application-cluster
 attributes are exposed from those definitions, along with power-source
@@ -70,11 +73,22 @@ event of a new type creates its property. Property labels use the cluster name,
 with a `min`, `max` or `Uncertainty` suffix where applicable. Other attributes,
 commands or events in a cluster can share a label; their property IDs remain distinct.
 
+When supported, the time node contains **Sync time**, which sets the device's
+UTC time from the bridge host's clock, and **Time zone**, which selects Europe/Prague,
+Europe/London or UTC and configures
+the corresponding daylight-saving schedule. The bridge remembers successful
+selections and refreshes the schedule while running, including after a restart.
+Keep the bridge running and its system clock and time-zone data accurate.
+The controls appear only when their required Matter commands are advertised;
+failures are logged. If the time-zone command succeeds but the DST command
+fails, the device may be left with an incomplete schedule; select the time zone
+again to retry.
+
 Some unit conversions are specified by Matter rather than described by the
 device and are applied separately; other values remain in their raw Matter
 encoding. The model describes standard possibilities,
 so a device may reject a particular enum value or command parameter. Unknown
-vendor-specific clusters, system/security clusters, secret or fabric-scoped
+vendor-specific clusters, other system/security clusters, secret or fabric-scoped
 fields, and binary attributes are not exposed. Commands containing model-marked
 secrets are excluded, and atomic writes require Matter Server schema 15. Protect
 MQTT traffic and logs; generic command payloads must not contain secrets.

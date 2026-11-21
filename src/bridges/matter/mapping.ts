@@ -1,5 +1,5 @@
 import { ComponentType, PropertyClass, PropertyDataType } from "iot-platform/deno";
-import { AttributeModel, CommandModel, EventModel, Matter, Metatype, type ValueModel } from "@matter/model";
+import { AttributeModel, CommandModel, DeviceClassification, EventModel, Matter, Metatype, type ValueModel } from "@matter/model";
 import { toBigIntAwareJson, type MatterNode } from "@matter-server/ws-client";
 
 export interface MatterProperty {
@@ -18,7 +18,7 @@ export interface MatterProperty {
     timed?: boolean;
     atomic?: boolean;
     jsonKind?: "array" | "object" | "bitmap";
-    command?: "onoff" | "level" | "write" | "invoke";
+    command?: "onoff" | "level" | "write" | "invoke" | "sync-time" | "time-zone";
     commandName?: string;
     cluster?: number;
 }
@@ -27,6 +27,25 @@ const clusters = new Map(Matter.clusters.filter((cluster) => cluster.id !== unde
 
 function humanName(name: string) {
     return name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Z])([A-Z][a-z])/g, "$1 $2");
+}
+
+export function endpointName(node: MatterNode, endpoint: number): string {
+    const types = node.attributes[`${endpoint}/29/0`];
+    let utilityName: string | undefined;
+    if (Array.isArray(types)) {
+        for (const entry of types) {
+            if (!entry || typeof entry !== "object") continue;
+            let id: unknown = entry["0"];
+            if (id === undefined) id = entry.deviceType;
+            if (typeof id !== "number") continue;
+            const model = Matter.deviceTypes(id);
+            if (!model) continue;
+            if (!DeviceClassification.isUtility(model.classification)) return humanName(model.name);
+            if (!utilityName) utilityName = humanName(model.name);
+        }
+    }
+    if (utilityName) return utilityName;
+    return `Endpoint ${endpoint}`;
 }
 
 function propertyName(clusterName: string, modelName: string) {
@@ -177,7 +196,24 @@ export function mapProperties(node: MatterNode, schemaVersion = 15): MatterPrope
         const endpoint = Number(match[1]);
         const clusterId = Number(match[2]);
         const cluster = clusters.get(clusterId);
-        if (!cluster || cluster.effectiveClassification !== "application") continue;
+        if (!cluster || (cluster.effectiveClassification !== "application" && clusterId !== 56)) continue;
+        if (clusterId === 56) {
+            if (accepted.includes(0)) {
+                result.push({
+                    path: `${endpoint}/56/command/0`, endpoint, cluster: 56,
+                    id: "power", name: "Sync time", type: PropertyDataType.enum,
+                    format: "on", command: "sync-time",
+                });
+            }
+            if (accepted.includes(2) && accepted.includes(4)) {
+                result.push({
+                    path: `${endpoint}/56/5`, endpoint, cluster: 56,
+                    id: `e${endpoint}-c56-timezone`, name: "Time zone", type: PropertyDataType.enum,
+                    format: "Europe/Prague,Europe/London,UTC", command: "time-zone",
+                });
+            }
+            continue;
+        }
         if (clusterId === 6 && result.some((property) => property.endpoint === endpoint && property.command === "onoff")) continue;
         for (const model of cluster.allAces) {
             if (!(model instanceof CommandModel) || model.direction !== "request" ||
@@ -208,6 +244,12 @@ export function mapEvent(endpoint: number, clusterId: number, eventId: number): 
 
 export function propertyValue(property: MatterProperty, value: unknown): string | undefined {
     if (value === null || value === undefined) return undefined;
+    if (property.command === "time-zone") {
+        if (!Array.isArray(value) || !value[0] || typeof value[0] !== "object") return undefined;
+        const name = value[0].name || value[0]["2"];
+        if (name === "Europe/Prague" || name === "Europe/London" || name === "UTC") return name;
+        return undefined;
+    }
     if (property.conversion === "occupancy") {
         if (typeof value === "number") return String((value & 1) !== 0);
         if (typeof value === "object" && "0" in value && typeof value["0"] === "boolean") return String(value["0"]);
@@ -224,7 +266,11 @@ export function propertyValue(property: MatterProperty, value: unknown): string 
             const name = Object.keys(property.enumValues).find((key) => property.enumValues![key] === value);
             if (name) return name;
         }
-        return String(property.scale === undefined ? value : value * property.scale);
+        if (property.scale !== undefined) {
+            // Divide by the integral scale denominator to avoid multiplication artifacts.
+            return String(value / (1 / property.scale));
+        }
+        return String(value);
     }
     if (typeof value === "boolean" || typeof value === "bigint" || typeof value === "string") return String(value);
     if (typeof value === "object") return toBigIntAwareJson(value);

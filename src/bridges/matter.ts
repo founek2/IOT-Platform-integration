@@ -3,7 +3,8 @@ import { MatterClient, parseBigIntAwareJson, toBigIntAwareJson, type MatterNode,
 import { ComponentType, DeviceCommand, DeviceStatus, Platform, Property, PropertyDataType } from "iot-platform/deno";
 import type { MqttClient } from "mqtt";
 import { withDefault, type FactoryFn } from "../types.ts";
-import { endpointType, mapEvent, mapProperties, propertyValue, type MatterProperty } from "./matter/mapping.ts";
+import { endpointName, endpointType, mapEvent, mapProperties, propertyValue, type MatterProperty } from "./matter/mapping.ts";
+import { isTimeZone, matterTime, timeZoneSchedule, type TimeZone } from "./matter/time.ts";
 
 export const Schema = z.object({
     matterUrl: withDefault(z.string(), "ws://192.168.25.5:5580/ws"),
@@ -39,6 +40,59 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let connectTask: Promise<void> | undefined;
     let queue = Promise.resolve();
+    let timeQueue = Promise.resolve();
+    const timeSchedules = new Map<string, { zone: TimeZone; timer?: ReturnType<typeof setTimeout> }>();
+    const unconfirmedTimeZone = "unconfirmed";
+
+    function timeKey(id: string, endpoint: number) {
+        return `${bridge.id}-matter-timezone-${id}-${endpoint}`;
+    }
+
+    function runTimeTask(work: () => Promise<void>) {
+        const result = timeQueue.then(work);
+        timeQueue = result.then(() => {}, () => {});
+        return result;
+    }
+
+    function stopTimeSchedule(key: string) {
+        const state = timeSchedules.get(key);
+        if (state?.timer) clearTimeout(state.timer);
+        timeSchedules.delete(key);
+    }
+
+    function scheduleTimeRefresh(id: string, endpoint: number, zone: TimeZone, delay: number) {
+        const key = timeKey(id, endpoint);
+        stopTimeSchedule(key);
+        if (closing) return;
+        const state: { zone: TimeZone; timer?: ReturnType<typeof setTimeout> } = { zone };
+        timeSchedules.set(key, state);
+        state.timer = setTimeout(() => {
+            void runTimeTask(async () => {
+                if (closing || timeSchedules.get(key) !== state) return;
+                try {
+                    const node = client.nodes[id];
+                    if (!connected || !node?.available) throw new Error("Matter device is disconnected");
+                    const timeZone = node.attributes[`${endpoint}/56/5`];
+                    let reported: unknown;
+                    if (Array.isArray(timeZone) && timeZone[0] && typeof timeZone[0] === "object") {
+                        reported = timeZone[0].name || timeZone[0]["2"];
+                    }
+                    if (typeof reported === "string" && reported !== zone) {
+                        storage.removeItem(key);
+                        stopTimeSchedule(key);
+                        logger.warning(`Matter time zone changed externally on node ${id}; stopped DST refresh`);
+                        return;
+                    }
+                    const schedule = timeZoneSchedule(zone, Date.now(), Number(node.attributes[`${endpoint}/56/11`]));
+                    await client.deviceCommand(node.node_id, endpoint, 56, "setDstOffset", { dstOffset: schedule.dstOffset });
+                    if (timeSchedules.get(key) === state) scheduleTimeRefresh(id, endpoint, zone, schedule.refreshAt - Date.now());
+                } catch (error) {
+                    logger.error(`Failed to refresh Matter DST schedule for node ${id}`, error);
+                    if (timeSchedules.get(key) === state) scheduleTimeRefresh(id, endpoint, zone, 60_000);
+                }
+            });
+        }, Math.max(0, delay));
+    }
 
     const pairing = new Platform(bridge.id, config.userName, bridge.name, config.mqtt.uri, config.mqtt.port, storage);
     const pairingNode = pairing.addNode("pairing", "Matter pairing", ComponentType.generic);
@@ -148,6 +202,13 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
                 await instance.platform.disconnect();
                 devices.delete(id);
                 observedEvents.delete(id);
+                for (const definition of instance.properties.values()) {
+                    if (definition.definition.command === "time-zone") {
+                        const key = timeKey(id, definition.definition.endpoint);
+                        stopTimeSchedule(key);
+                        storage.removeItem(key);
+                    }
+                }
             }
         }
         for (const [id, node] of Object.entries(nodes)) {
@@ -156,16 +217,25 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
             const events = observedEvents.get(id);
             if (events) definitions.push(...events.values());
             const name = node.nodeLabel || node.productName || `Matter ${id}`;
-            const signature = JSON.stringify({ name, definitions });
+            const endpoints = new Set(definitions.map((definition) => definition.endpoint));
+            if (!endpoints.size) endpoints.add(0);
+            const endpointNames = new Map(Array.from(endpoints, (endpoint) => [endpoint, endpointName(node, endpoint)]));
+            const signature = JSON.stringify({ name, definitions, endpointNames: Array.from(endpointNames) });
             let instance = devices.get(id);
             if (instance && instance.signature !== signature) {
+                for (const { definition } of instance.properties.values()) {
+                    if (definition.command === "time-zone" &&
+                        !definitions.some((item) => item.path === definition.path && item.command === "time-zone")) {
+                        stopTimeSchedule(timeKey(id, definition.endpoint));
+                    }
+                }
                 await instance.platform.disconnect();
                 devices.delete(id);
                 instance = undefined;
             }
             if (!instance) {
                 if (!definitions.length) logger.warning(`Matter node ${id} has no supported properties`);
-                instance = createDevice(id, node, name, definitions, signature);
+                instance = createDevice(id, node, name, definitions, endpointNames, signature);
                 devices.set(id, instance);
                 try {
                     instance.platform.init();
@@ -174,29 +244,75 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
                     devices.delete(id);
                     throw error;
                 }
+                for (const definition of definitions) {
+                    if (definition.command !== "time-zone") continue;
+                    const key = timeKey(id, definition.endpoint);
+                    const saved = storage.getItem(key);
+                    if (saved && isTimeZone(saved) && !timeSchedules.has(key)) {
+                        scheduleTimeRefresh(id, definition.endpoint, saved, 0);
+                    }
+                }
             }
             publishNode(instance, node);
         }
     }
 
-    function createDevice(id: string, node: MatterNode, name: string, definitions: MatterProperty[], signature: string): DeviceInstance {
+    function createDevice(id: string, node: MatterNode, name: string, definitions: MatterProperty[],
+        endpointNames: Map<number, string>, signature: string): DeviceInstance {
         const platform = new Platform(`${bridge.id}-matter-${id}`, config.userName, name,
             config.mqtt.uri, config.mqtt.port, storage);
         const properties = new Map<string, { definition: MatterProperty; property: Property }>();
-        const endpoints = new Set(definitions.map((definition) => definition.endpoint));
-        if (!endpoints.size) endpoints.add(0);
-        for (const endpoint of endpoints) {
+        for (const [endpoint, endpointLabel] of endpointNames) {
             const endpointProperties = definitions.filter((definition) => definition.endpoint === endpoint);
-            const iotNode = platform.addNode(`endpoint${endpoint}`, `Endpoint ${endpoint}`, endpointType(endpointProperties));
+            const timeProperties = endpointProperties.filter((definition) =>
+                definition.command === "sync-time" || definition.command === "time-zone");
+            const normalProperties = endpointProperties.filter((definition) =>
+                definition.command !== "sync-time" && definition.command !== "time-zone");
+            let iotNode;
+            if (normalProperties.length || !endpointProperties.length) {
+                iotNode = platform.addNode(`endpoint${endpoint}`, endpointLabel, endpointType(normalProperties));
+            }
+            let timeNode;
+            if (timeProperties.length) {
+                const type = timeProperties.some((definition) => definition.command === "sync-time")
+                    ? ComponentType.activator : ComponentType.generic;
+                timeNode = platform.addNode(`endpoint${endpoint}-sync-time`, "Time", type);
+            }
             for (const definition of endpointProperties) {
-                const property = iotNode.addProperty({
+                const targetNode = definition.command === "sync-time" || definition.command === "time-zone"
+                    ? timeNode : iotNode;
+                if (!targetNode) throw new Error(`Missing Matter endpoint ${endpoint}`);
+                const property = targetNode.addProperty({
                     propertyId: definition.id, name: definition.name, dataType: definition.type,
                     propertyClass: definition.propertyClass, unitOfMeasurement: definition.unit,
                     settable: Boolean(definition.command), format: definition.format,
                     callback: async (value) => {
                         try {
                             if (!connected) throw new Error("Matter server is disconnected");
-                            if (definition.command === "onoff") {
+                            if (definition.command === "sync-time") {
+                                if (value !== "on") throw new Error("Expected on");
+                                await client.deviceCommand(node.node_id, endpoint, 56, "setUtcTime",
+                                    { utcTime: matterTime(Date.now()), granularity: 2 });
+                            } else if (definition.command === "time-zone") {
+                                if (!isTimeZone(value)) throw new Error("Invalid time zone");
+                                await runTimeTask(async () => {
+                                    if (!connected) throw new Error("Matter server is disconnected");
+                                    const latest = client.nodes[id];
+                                    if (!latest?.available) throw new Error("Matter device is disconnected");
+                                    const schedule = timeZoneSchedule(value, Date.now(), Number(latest.attributes[`${endpoint}/56/11`]));
+                                    const key = timeKey(id, endpoint);
+                                    stopTimeSchedule(key);
+                                    storage.setItem(key, unconfirmedTimeZone);
+                                    property.setValue("");
+                                    await client.deviceCommand(node.node_id, endpoint, 56, "setTimeZone",
+                                        { timeZone: [{ offset: schedule.standardOffset, validAt: 0, name: value }] });
+                                    await client.deviceCommand(node.node_id, endpoint, 56, "setDstOffset",
+                                        { dstOffset: schedule.dstOffset });
+                                    storage.setItem(key, value);
+                                    scheduleTimeRefresh(id, endpoint, value, schedule.refreshAt - Date.now());
+                                    property.setValue(value);
+                                });
+                            } else if (definition.command === "onoff") {
                                 if (value !== "true" && value !== "false") throw new Error("Expected true or false");
                                 await client.deviceCommand(node.node_id, endpoint, 6, value === "true" ? "on" : "off", {});
                             } else if (definition.command === "level") {
@@ -278,6 +394,8 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
     function publishNode(instance: DeviceInstance, node: MatterNode) {
         instance.platform.publishStatus(connected && node.available ? DeviceStatus.ready : DeviceStatus.disconnected);
         for (const [path, { definition, property }] of instance.properties) {
+            if (definition.command === "time-zone" &&
+                storage.getItem(timeKey(String(node.node_id), definition.endpoint)) === unconfirmedTimeZone) continue;
             const value = propertyValue(definition, node.attributes[path]);
             if (value !== undefined) property.setValue(value);
             else if (node.attributes[path] === null) property.setValue("");
@@ -366,10 +484,12 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
         async cleanUp() {
             closing = true;
             if (reconnectTimer) clearTimeout(reconnectTimer);
+            for (const key of timeSchedules.keys()) stopTimeSchedule(key);
             client.disconnect();
             client.connection.disconnect();
             if (connectTask) await connectTask;
             await queue;
+            await timeQueue;
             const platforms = [pairing, ...Array.from(devices.values(), (device) => device.platform)];
             const results = await Promise.allSettled(platforms.filter((platform) => platform.client).map((platform) => platform.disconnect()));
             const errors = results.filter((result) => result.status === "rejected").map((result) => result.reason);
