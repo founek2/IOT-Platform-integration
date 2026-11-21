@@ -1,14 +1,14 @@
 import { Platform, DeviceStatus, ComponentType, PropertyDataType, PropertyClass } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string } from 'computed_types';
+import { z } from "zod";
 import { UsspaClient } from "./usspa/usspaClient.ts";
 
-export const Schema = SchemaValidator({
-    usspaSerialNumber: string,
-    usspaPassword: string,
+export const Schema = z.object({
+    usspaSerialNumber: z.string(),
+    usspaPassword: z.string(),
 })
 
-type YamahaConfig = Type<typeof Schema>;
+type YamahaConfig = z.infer<typeof Schema>;
 
 export const factory: FactoryFn<YamahaConfig> = function (config, device, logger, storage) {
     const usspa = new UsspaClient(device.usspaSerialNumber, device.usspaPassword);

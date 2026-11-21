@@ -1,14 +1,14 @@
-import SchemaValidator, { string, Type } from "computed_types";
+import { z } from "zod";
 import { MatterClient, parseBigIntAwareJson, toBigIntAwareJson, type MatterNode, type MatterNodeEvent } from "@matter-server/ws-client";
 import { ComponentType, DeviceCommand, DeviceStatus, Platform, Property, PropertyDataType } from "iot-platform/deno";
 import type { MqttClient } from "mqtt";
-import type { FactoryFn } from "../types.ts";
+import { withDefault, type FactoryFn } from "../types.ts";
 import { endpointType, mapEvent, mapProperties, propertyValue, type MatterProperty } from "./matter/mapping.ts";
 
-export const Schema = SchemaValidator({
-    matterUrl: string.optional("ws://192.168.25.5:5580/ws"),
+export const Schema = z.object({
+    matterUrl: withDefault(z.string(), "ws://192.168.25.5:5580/ws"),
 });
-type MatterConfig = Type<typeof Schema>;
+type MatterConfig = z.infer<typeof Schema>;
 
 interface DeviceInstance {
     platform: Platform;

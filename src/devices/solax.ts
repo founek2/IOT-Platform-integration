@@ -1,4 +1,4 @@
-import SchemaValidator, { Type, string } from 'computed_types';
+import { z } from "zod";
 import { Platform, ComponentType, PropertyDataType, PropertyClass } from "iot-platform/deno"
 import fetch from 'npm:node-fetch@3.3.2';
 import { FactoryFn } from '../types.ts';
@@ -13,12 +13,12 @@ const MIN_6 = 6 * 60 * 1000; /* ms */
 // assert(REGISTRATION_NUMBER, 'missing env REGISTRATION_NUMBER');
 // assert(MQTT_PASSWORD, 'missing env SOLAX_MQTT_PASSWORD');
 
-export const Schema = SchemaValidator({
-    solaxApiKey: string,
-    solaxRegistrationNumber: string,
-    solaxMqttPassword: string,
+export const Schema = z.object({
+    solaxApiKey: z.string(),
+    solaxRegistrationNumber: z.string(),
+    solaxMqttPassword: z.string(),
 })
-type IntexConfig = Type<typeof Schema>;
+type IntexConfig = z.infer<typeof Schema>;
 
 
 export const factory: FactoryFn<IntexConfig> = function (config, device, logger, storage) {

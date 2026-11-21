@@ -1,22 +1,22 @@
 import { Platform, ComponentType, PropertyDataType } from "iot-platform/deno"
-import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, array } from 'computed_types';
+import { FactoryFn, optional } from '../types.ts';
+import { z } from "zod";
 
-const ActionSchema = SchemaValidator({
-    mqttTopic: string,
-    mqttValue: string,
-    smsNumber: string,
-    smsValue: string
+const ActionSchema = z.object({
+    mqttTopic: z.string(),
+    mqttValue: z.string(),
+    smsNumber: z.string(),
+    smsValue: z.string()
 })
 
-export const Schema = SchemaValidator({
-    basicAuth: string,
-    endpoint: string,
-    fromNumber: string,
-    smsActions: array.of(ActionSchema).optional()
+export const Schema = z.object({
+    basicAuth: z.string(),
+    endpoint: z.string(),
+    fromNumber: z.string(),
+    smsActions: optional(z.array(ActionSchema))
 })
 
-type BraviaConfig = Type<typeof Schema>;
+type BraviaConfig = z.infer<typeof Schema>;
 
 export const factory: FactoryFn<BraviaConfig> = function (config, device, logger, storage) {
     const plat = new Platform(device.id, config.userName, device.name, config.mqtt.uri, config.mqtt.port, storage);

@@ -1,25 +1,25 @@
 import { exec } from "https://deno.land/x/exec@0.0.5/mod.ts";
 import { Platform, DeviceStatus, ComponentType, PropertyDataType, CallbackFn } from "iot-platform/deno"
-import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number, array } from 'computed_types';
+import { FactoryFn, optional, withDefault } from '../types.ts';
+import { z } from "zod";
 import { Samsung } from '../../samsung-tv-control/src/index.ts'
 import KEYS from "../../samsung-tv-control/src/keys.ts";
 import UPnPClient from '../../node-upnp/index.js'
 
-const ActionSchema = SchemaValidator({
-    name: string,
-    url: string
+const ActionSchema = z.object({
+    name: z.string(),
+    url: z.string()
 })
 
-export const Schema = SchemaValidator({
-    tizenIp: string,
-    tizenMac: string,
-    tizenToken: string.optional(),
-    tizenUpnpPort: number.optional(8081),
-    tizenActions: array.of(ActionSchema).optional()
+export const Schema = z.object({
+    tizenIp: z.string(),
+    tizenMac: z.string(),
+    tizenToken: optional(z.string()),
+    tizenUpnpPort: withDefault(z.number(), 8081),
+    tizenActions: optional(z.array(ActionSchema))
 })
 
-type TizenConfig = Type<typeof Schema>;
+type TizenConfig = z.infer<typeof Schema>;
 
 // Working keys - KEY_VOLUP, KEY_VOLDOWN
 // no Idea how to get current state -> even HA implementation is missing it, as well as app controll - not available in new Tizen version

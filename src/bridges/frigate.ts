@@ -1,6 +1,6 @@
-import SchemaValidator, { Type, string, number, boolean } from 'computed_types';
+import { z } from "zod";
 import { Platform, DeviceStatus, PropertyDataType, ComponentType, Property } from "iot-platform/deno"
-import { FactoryFn } from '../types.ts';
+import { FactoryFn, optional, withDefault } from '../types.ts';
 import mqtt from "mqtt";
 import { topicParser } from './zigbee2mqtt/topicParser.ts';
 
@@ -19,31 +19,31 @@ function retry<T>(fn: () => T, every: number = 5_000, onError: (err: unknown) =>
 
 }
 
-const propertySchema = SchemaValidator({
-    name: string,
-    type: SchemaValidator.enum(PropertyDataType),
-    format: string.optional(),
-    settable: boolean,
+const propertySchema = z.object({
+    name: z.string(),
+    type: z.enum(PropertyDataType),
+    format: optional(z.string()),
+    settable: z.boolean(),
 })
-const sensorSchema = SchemaValidator({
-    name: string.optional(),
-    properties: SchemaValidator.record(string, propertySchema).optional()
-})
-
-export const Schema = SchemaValidator({
-    frigateUrl: string,
-    frigateMqtt: {
-        uri: string,
-        port: number,
-        prefix: string.optional("frigate"),
-        username: string.optional(),
-        password: string.optional()
-    },
-    frigateStreamUrl: string.optional(),
-    sensors: SchemaValidator.record(string, sensorSchema).optional()
+const sensorSchema = z.object({
+    name: optional(z.string()),
+    properties: optional(z.record(z.string(), propertySchema))
 })
 
-type FrigateConfig = Type<typeof Schema>;
+export const Schema = z.object({
+    frigateUrl: z.string(),
+    frigateMqtt: z.object({
+        uri: z.string(),
+        port: z.number(),
+        prefix: withDefault(z.string(), "frigate"),
+        username: optional(z.string()),
+        password: optional(z.string())
+    }),
+    frigateStreamUrl: optional(z.string()),
+    sensors: optional(z.record(z.string(), sensorSchema))
+})
+
+type FrigateConfig = z.infer<typeof Schema>;
 
 export const factory: FactoryFn<FrigateConfig> = async function (config, bridge, logger, storage) {
     const cams: Record<string, Property> = {};

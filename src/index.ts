@@ -2,7 +2,7 @@ import { parse } from "https://deno.land/std@0.202.0/yaml/mod.ts";
 import { args, EarlyExitFlag, Option } from "https://deno.land/x/args@2.1.1/index.ts"
 import { Text } from "https://deno.land/x/args@2.1.1/value-types.ts";
 import { Config, Module, SchemaGeneral, ConfigDevice, FactoryReturn, ModuleType } from "./types.ts";
-import SchemaValidator, { string } from 'computed_types';
+import { z } from "zod";
 import { Logger, logger } from "iot-platform/deno"
 import { startHealthcheckServer } from "./server.ts";
 import { LocalStorage } from "./localstorage.ts";
@@ -59,22 +59,24 @@ if (res.error) {
 const configFilePath = res.value.config
 const yamlConfig = await Deno.readTextFile(configFilePath);
 
-const configRaw: any = parse(yamlConfig);
+const configRaw: unknown = parse(yamlConfig);
 
 let config: Config
 try {
-    config = SchemaGeneral.validator(configRaw) as unknown as Config
+    config = SchemaGeneral.parse(configRaw)
     logger.info("Config loaded", JSON.stringify(config))
-} catch (err: any) {
-    logger.error(`Config validation failed, ${err.message}`)
+} catch (err) {
+    if (!(err instanceof z.ZodError)) throw err;
+    for (const issue of err.issues) {
+        logger.error(`Config validation failed, ${issue.message}, path: ${issue.path.join(".")}`)
+    }
     Deno.exit(1)
 }
 
-// const a = (Object.keys(modules) as unknown as string[]) as const;
-const SchemaDevice = SchemaValidator({
-    name: string,
-    type: string.regexp(new RegExp(`^(${loadedModuleNames.join("|")})$`)).error(`Expect type to be one of ${loadedModuleNames.join(", ")}`),
-})
+const SchemaDevice = z.looseObject({
+    name: z.string().min(1),
+    type: z.string(),
+});
 
 const localstorage = new LocalStorage(Deno.env.get("STORAGE_PATH") || "local-storage")
 
@@ -82,16 +84,13 @@ function constructDevice(id: string, device: ConfigDevice, module: Module) {
     const data = { id, ...device };
 
     try {
-        // Generic validator
-        SchemaDevice.validator(data)
-
         // Skip validation if Schema not present
-        module.Schema?.validator(data)
-        if (!data.name) throw new Error("Missing name")
-    } catch (err: any) {
-        const [path, reason] = err.message.split(":") as [string, string];
-        const value = path.split(".").reduce((acc, key) => acc ? (acc as any)[key] : acc, data)
-        logger.error(`Data validation failed. ${reason.trim()}, path: ${[id, path].join(".")}, provided value:`, value)
+        module.Schema?.parse(data)
+    } catch (err) {
+        if (!(err instanceof z.ZodError)) throw err;
+        for (const issue of err.issues) {
+            logger.error(`Data validation failed. ${issue.message}, path: ${[id, ...issue.path].join(".")}`)
+        }
         return
     }
 
@@ -110,7 +109,15 @@ const devices: Record<ModuleType, FactoryReturn[]> = {
     [ModuleType.custom]: [],
 };
 for (const moduleType of moduleTypes) {
-    for (const [id, device] of Object.entries(config[moduleType] || {})) {
+    for (const [id, value] of Object.entries(config[moduleType] || {})) {
+        const result = SchemaDevice.safeParse(value);
+        if (!result.success) {
+            for (const issue of result.error.issues) {
+                logger.error(`Data validation failed. ${issue.message}, path: ${[id, ...issue.path].join(".")}`)
+            }
+            continue;
+        }
+        const device = result.data;
         const module = modules[moduleType][device.type]
         if (!module) {
             logger.error(`Invalid type '${device.type}', supported ${Object.keys(modules[moduleType]).join(",")}`)

@@ -1,19 +1,19 @@
 import { Platform, ComponentType, PropertyDataType, Logger } from "iot-platform/deno"
-import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string } from 'computed_types';
+import { FactoryFn, optional } from '../types.ts';
+import { z } from "zod";
 import plexPinAuth from "npm:plex-api-pinauth";
 import PlexAPI from "npm:plex-api";
 import { client as WebSocketClient } from "npm:websocket";
 
 type Pin = { code: string, id: string };
 
-export const Schema = SchemaValidator({
-    plexUri: string,
-    plexToken: string.optional(),
-    plexDeviceName: string
+export const Schema = z.object({
+    plexUri: z.string(),
+    plexToken: optional(z.string()),
+    plexDeviceName: z.string()
 })
 
-type BraviaConfig = Type<typeof Schema>;
+type BraviaConfig = z.infer<typeof Schema>;
 
 export const factory: FactoryFn<BraviaConfig> = function (config, device, logger, storage) {
     const url = new URL(device.plexUri);

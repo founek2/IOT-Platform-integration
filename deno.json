@@ -9,7 +9,7 @@
     "@std/dotenv": "jsr:@std/dotenv@^0.225.6",
     "mqtt": "npm:mqtt@^5.15.0",
     "iot-platform/deno": "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/mod.ts",
-    "computed_types": "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts",
+    "zod": "npm:zod@^4.6.7",
     "prusa-link": "npm:@jamesgopsill/prusa-link@0.1.2",
     "deepl-node": "npm:deepl-node@1.24.0",
     "color-space": "npm:color-space@^2.3.2"

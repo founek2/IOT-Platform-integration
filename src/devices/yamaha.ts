@@ -1,14 +1,14 @@
 import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "iot-platform/deno"
-import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number } from 'computed_types';
+import { FactoryFn, optional } from '../types.ts';
+import { z } from "zod";
 import { YamahaClient, YamahaInput } from "./yamaha/YamahaClient.ts"
 
-export const Schema = SchemaValidator({
-    yamahaIp: string,
-    yamahaEventPort: number.optional()
+export const Schema = z.object({
+    yamahaIp: z.string(),
+    yamahaEventPort: optional(z.number())
 })
 
-type YamahaConfig = Type<typeof Schema>;
+type YamahaConfig = z.infer<typeof Schema>;
 
 export const factory: FactoryFn<YamahaConfig> = async function (config, device, logger, storage) {
     if (device.yamahaEventPort)

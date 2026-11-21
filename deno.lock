@@ -34,7 +34,8 @@
     "npm:request@*": "2.88.2",
     "npm:systeminformation@*": "5.30.7",
     "npm:websocket@*": "1.0.35",
-    "npm:ws@*": "8.19.0"
+    "npm:ws@*": "8.19.0",
+    "npm:zod@^4.6.7": "4.6.7"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -1381,6 +1382,9 @@
     "yaeti@0.0.6": {
       "integrity": "sha512-MvQa//+KcZCUkBTIC9blM+CU9J2GzuTytsOUwf2lidtvkx/6gnEp1QvJv34t9vdjhFmha/mUiNDbN0D0mJWdug==",
       "deprecated": true
+    },
+    "zod@4.6.7": {
+      "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="
     }
   },
   "redirects": {
@@ -1600,24 +1604,6 @@
     "https://deno.land/x/jose@v5.8.0/util/errors.ts": "5b57f5e40b3e7302634d4f31d848b23e58cc2322a547dbd35e75c792c4b3164c",
     "https://deno.land/x/jose@v5.8.0/util/runtime.ts": "088cae7df0d285065f141d880c5c21a572234997082337d1125d7f1603059642",
     "https://deno.land/x/once@0.2.1-ts/index.ts": "459257c9a212c8202152563f3c04b708bc013e49288982e693e6c8292da3541b",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/DateType.ts": "2608ef17bb31d573f4564a7a36b6348af7eab0cb7b26d332d7008512c13ab4e1",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/Schema.ts": "c984b56e12f0df38708659cdd94ad16fea7cfaba1c5360a0960d81cc4a81a6fd",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/Validator.ts": "5bf584120e3c9e9419366aeb89b598e0f939b086e31432dc553c13e3c50c0a01",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/array.ts": "b2d80a3829f339091b35ee98b241435670ffad054b0dea53079bab3bb01cfc41",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/boolean.ts": "dd92dddc106a71e33d9baaa047278b9008f2b4246311af551d4e19329f1ade6f",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/index.ts": "38f7f847ef7bb62a4827b9377219aaeda10022626086a5c6d7f78001a74c9f29",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/number.ts": "e24eeceab2c7780b342d096e8eff98d03e4ea254116765cc52f2556b21291e4a",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/object.ts": "2fc497dfbed78a8829a522a64245167d7e3c76d0bb5025c7d21a0939f476aa62",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/schema/FunctionType.ts": "6d8dffdd3553caae84ef24c26f6cfb81424c2c8dbc684d7285b0d9a286dd0bb4",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/schema/compiler.ts": "a7616cae64b685b369ca72138d47571b9976a13f9b215fbdb0ac161e527ccc49",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/schema/errors.ts": "5bffd35e870b87864f884b2a8dd1fbb6aa26060a7bd5a8d1f02625aafc95fbaa",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/schema/io.ts": "f487465d2bd1ec35e640bee59229d4d885689b1e2866eef9b96a588de5e0ae2f",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/schema/logic.ts": "4e94d98f5a36bb1a2b2f422a5613a3daea6449078939f5c52e7d97e9bb57d8fd",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/schema/switch.ts": "a0e445e48f8a356e359050ea51d4462a0ecbf239d8365a00000b0af166e70858",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/schema/utils.ts": "fef16c818ff21d57cf4a6b4f5892316d56d5930f4511fc30cabb826843850c8b",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/schema/validations.ts": "6bff44e2740f3e4cfd8114935edf838404bb9dac0e8490704e1ec1401e3fbe3b",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/string.ts": "4f26966ec3c07be6817ba9e22f2c62ba908095f5224812b68b0c26ae92442329",
-    "https://denoporter.sirjosh.workers.dev/v1/deno.land/x/computed_types/src/unknown.ts": "f685f5c45a3b45414df2a998d374f90c14512a854d408fc7a59050c95f00953c",
     "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/connection.ts": "44d237dccd0b437f81c04d14ed74dd290c04e8e3b7a67af87f635c63224c17c5",
     "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/eventEmitter.ts": "388866e96fd143e921def448f807315f05fc8cc3b7aaa035438d9e64fc43dea3",
     "https://raw.githubusercontent.com/founek2/IOT-Platform-deno/master/src/logger/fn.ts": "580dbb830cd47fa15aea0888a5ae63e4779d6d2338d6f226cc085a83c01069f9",
@@ -1639,7 +1625,8 @@
       "npm:@matter/model@0.18.1-alpha.0-20261114-e4326a175",
       "npm:color-space@^2.3.2",
       "npm:deepl-node@1.24.0",
-      "npm:mqtt@^5.15.0"
+      "npm:mqtt@^5.15.0",
+      "npm:zod@^4.6.7"
     ]
   }
 }

@@ -1,6 +1,6 @@
-import SchemaValidator, { Type, string, number, array } from 'computed_types';
+import { z } from "zod";
 import { Platform, DeviceStatus, PropertyDataType, ComponentType } from "iot-platform/deno"
-import { FactoryFn } from '../types.ts';
+import { FactoryFn, optional, withDefault } from '../types.ts';
 import mqtt from "mqtt";
 import { DeviceTransformed, TransformedExpose } from "./zigbee2mqtt/convertor.ts"
 import { topicParser } from './zigbee2mqtt/topicParser.ts';
@@ -10,30 +10,30 @@ import { filterByWhitelist } from './zigbee2mqtt/whitelistFilter.ts';
 import { Device } from './zigbee2mqtt/types/device.ts';
 import { transformAndOverrideDevice } from './zigbee2mqtt/convertor.ts';
 
-const propertySchema = SchemaValidator({
-    name: string.optional(),
-    type: SchemaValidator.enum(PropertyDataType),
-    format: string.optional(),
+const propertySchema = z.object({
+    name: optional(z.string()),
+    type: z.enum(PropertyDataType),
+    format: optional(z.string()),
 })
-const overrideSchema = SchemaValidator({
-    name: string.optional(),
-    properties: SchemaValidator.record(string, propertySchema).optional()
-})
-
-export const Schema = SchemaValidator({
-    deeplApiKey: string.optional(),
-    zigbeeMqtt: {
-        uri: string,
-        port: number,
-        prefix: string.optional("zigbee2mqtt"),
-        username: string.optional(),
-        password: string.optional(),
-    },
-    whitelist: array.of(string).optional(),
-    override: SchemaValidator.record(string, overrideSchema).optional()
+const overrideSchema = z.object({
+    name: optional(z.string()),
+    properties: optional(z.record(z.string(), propertySchema))
 })
 
-type Zigbee2MqttConfig = Type<typeof Schema>;
+export const Schema = z.object({
+    deeplApiKey: optional(z.string()),
+    zigbeeMqtt: z.object({
+        uri: z.string(),
+        port: z.number(),
+        prefix: withDefault(z.string(), "zigbee2mqtt"),
+        username: optional(z.string()),
+        password: optional(z.string()),
+    }),
+    whitelist: optional(z.array(z.string())),
+    override: optional(z.record(z.string(), overrideSchema))
+})
+
+type Zigbee2MqttConfig = z.infer<typeof Schema>;
 
 export const factory: FactoryFn<Zigbee2MqttConfig> = function (config, bridge, logger, storage) {
     let instances: Platform[] = [];

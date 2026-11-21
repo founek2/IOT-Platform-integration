@@ -1,33 +1,33 @@
-import { FactoryFn } from '../types.ts';
-import SchemaValidator, { string, array, Type, object } from 'computed_types';
+import { FactoryFn, optional, withDefault } from '../types.ts';
+import { z } from "zod";
 import { Logger } from 'iot-platform/deno';
 import { UnifiClient } from './unifi/unifiClient.ts';
 import isBefore from "https://deno.land/x/date_fns@v2.15.0/isBefore/index.js";
 import addHours from "https://deno.land/x/date_fns@v2.15.0/addHours/index.js";
 
 
-const SchemaWebhook = SchemaValidator({
-    url: string,
-    method: string.optional(),
-    headers: object.optional({}),
+const SchemaWebhook = z.object({
+    url: z.string(),
+    method: optional(z.string()),
+    headers: withDefault(z.custom<object>((value) => typeof value === "object" && value !== null), {}),
 })
-type WebhookConfig = Type<typeof SchemaWebhook>;
+type WebhookConfig = z.infer<typeof SchemaWebhook>;
 
-const SchemaAction = SchemaValidator({
-    webhooksUp: array.of(SchemaWebhook),
-    webhooksDown: array.of(SchemaWebhook),
-    hosts: array.of(string),
-    lastSeen: string.optional("2d")
-})
-
-export const Schema = SchemaValidator({
-    unifiControllerUrl: string,
-    unifiUserName: string,
-    unifiPassword: string,
-    unifiWatcher: array.of(SchemaAction),
+const SchemaAction = z.object({
+    webhooksUp: z.array(SchemaWebhook),
+    webhooksDown: z.array(SchemaWebhook),
+    hosts: z.array(z.string()),
+    lastSeen: withDefault(z.string(), "2d")
 })
 
-type WatcherConfig = Type<typeof Schema>;
+export const Schema = z.object({
+    unifiControllerUrl: z.string(),
+    unifiUserName: z.string(),
+    unifiPassword: z.string(),
+    unifiWatcher: z.array(SchemaAction),
+})
+
+type WatcherConfig = z.infer<typeof Schema>;
 
 const MINUTES_30 = 30 * 60 * 1000;
 const cache: Record<string, { timestamp: Date, value: boolean } | undefined> = {}

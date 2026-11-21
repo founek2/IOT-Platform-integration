@@ -1,15 +1,15 @@
 import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "iot-platform/deno"
 import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string } from 'computed_types';
+import { z } from "zod";
 import { PrusaLink, PrusaLinkConfig } from "prusa-link"
 
-export const Schema = SchemaValidator({
-    prusaIp: string,
-    prusaUserName: string,
-    prusaPassword: string
+export const Schema = z.object({
+    prusaIp: z.string(),
+    prusaUserName: z.string(),
+    prusaPassword: z.string()
 })
 
-type BraviaConfig = Type<typeof Schema>;
+type BraviaConfig = z.infer<typeof Schema>;
 
 const stateToText: { [text: string]: string } = {
     IDLE: 'Nečinné', BUSY: 'Zaneprázděno', PRINTING: 'Tisknu', PAUSED: 'Pozastaveno', FINISHED: 'Dokončeno', STOPPED: 'Zastaveno', ERROR: 'Chyba', ATTENTION: 'Pozor!', READY: 'Připraveno'

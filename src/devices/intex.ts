@@ -1,16 +1,16 @@
-import SchemaValidator, { Type, string, number } from 'computed_types';
+import { z } from "zod";
 import { Platform, ComponentType, PropertyDataType, PropertyClass, DeviceStatus } from "iot-platform/deno"
 import { Socket } from 'node:net';
 import { decodeData, prepareCommand, commands } from './intex/spaDecoder.ts';
 import { FactoryFn } from '../types.ts';
 import { Buffer } from 'https://deno.land/std@0.197.0/streams/buffer.ts';
 
-export const Schema = SchemaValidator({
-    intexIp: string,
-    intexPort: number,
+export const Schema = z.object({
+    intexIp: z.string(),
+    intexPort: z.number(),
 })
 
-type IntexConfig = Type<typeof Schema>;
+type IntexConfig = z.infer<typeof Schema>;
 
 
 export const factory: FactoryFn<IntexConfig> = function (config, device, logger, storage) {

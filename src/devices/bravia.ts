@@ -1,22 +1,22 @@
 import { exec } from "https://deno.land/x/exec@0.0.5/mod.ts";
 import { Platform, DeviceStatus, ComponentType, PropertyDataType } from "iot-platform/deno"
-import { FactoryFn } from '../types.ts';
-import SchemaValidator, { Type, string, number, array } from 'computed_types';
+import { FactoryFn, optional } from '../types.ts';
+import { z } from "zod";
 import { BraviaClient } from "./bravia/BraviaClient.ts"
 import { CallbackFn } from "iot-platform/deno";
 
-const ActionSchema = SchemaValidator({
-    name: string,
-    url: string
+const ActionSchema = z.object({
+    name: z.string(),
+    url: z.string()
 })
 
-export const Schema = SchemaValidator({
-    braviaIp: string,
-    braviaPsk: number,
-    braviaActions: array.of(ActionSchema).optional()
+export const Schema = z.object({
+    braviaIp: z.string(),
+    braviaPsk: z.number(),
+    braviaActions: optional(z.array(ActionSchema))
 })
 
-type BraviaConfig = Type<typeof Schema>;
+type BraviaConfig = z.infer<typeof Schema>;
 
 export const factory: FactoryFn<BraviaConfig> = function (config, device, logger, storage) {
     const bravia = new BraviaClient(device.braviaIp, device.braviaPsk);
