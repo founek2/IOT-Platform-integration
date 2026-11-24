@@ -94,6 +94,9 @@ secrets are excluded, and atomic writes require Matter Server schema 15. Protect
 MQTT traffic and logs; generic command payloads must not contain secrets.
 Attribute values and events come from Matter Server's subscriptions, which
 must not be disabled.
+Changed property values are forwarded immediately; unchanged values are sent at
+most once per minute when updates arrive. MQTT reconnects republish current
+values, and individual Matter events are always forwarded.
 
 ### Zigbee2mqtt
 

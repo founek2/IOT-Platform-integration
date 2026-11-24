@@ -11,6 +11,8 @@ export const Schema = z.object({
 });
 type MatterConfig = z.infer<typeof Schema>;
 
+const REPEAT_INTERVAL = 60_000;
+
 interface DeviceInstance {
     platform: Platform;
     signature: string;
@@ -41,8 +43,19 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
     let connectTask: Promise<void> | undefined;
     let queue = Promise.resolve();
     let timeQueue = Promise.resolve();
+    const lastPublications = new WeakMap<Property, { value: string; time: number }>();
     const timeSchedules = new Map<string, { zone: TimeZone; timer?: ReturnType<typeof setTimeout> }>();
     const unconfirmedTimeZone = "unconfirmed";
+
+    function publishProperty(property: Property, value: string, force = false) {
+        const now = performance.now();
+        const previous = lastPublications.get(property);
+        if (!force && previous && previous.value === value && now - previous.time < REPEAT_INTERVAL) return;
+        property.setValue(value);
+        if (property.client && property.propertyTopic && !property.client.disconnected && !property.client.disconnecting) {
+            lastPublications.set(property, { value, time: now });
+        }
+    }
 
     function timeKey(id: string, endpoint: number) {
         return `${bridge.id}-matter-timezone-${id}-${endpoint}`;
@@ -303,14 +316,14 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
                                     const key = timeKey(id, endpoint);
                                     stopTimeSchedule(key);
                                     storage.setItem(key, unconfirmedTimeZone);
-                                    property.setValue("");
+                                    publishProperty(property, "");
                                     await client.deviceCommand(node.node_id, endpoint, 56, "setTimeZone",
                                         { timeZone: [{ offset: schedule.standardOffset, validAt: 0, name: value }] });
                                     await client.deviceCommand(node.node_id, endpoint, 56, "setDstOffset",
                                         { dstOffset: schedule.dstOffset });
                                     storage.setItem(key, value);
                                     scheduleTimeRefresh(id, endpoint, value, schedule.refreshAt - Date.now());
-                                    property.setValue(value);
+                                    publishProperty(property, value);
                                 });
                             } else if (definition.command === "onoff") {
                                 if (value !== "true" && value !== "false") throw new Error("Expected true or false");
@@ -386,19 +399,19 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
         }
         platform.on("connect", () => {
             const latest = client.nodes[id];
-            if (latest) publishNode({ platform, signature, properties }, latest);
+            if (latest) publishNode({ platform, signature, properties }, latest, true);
         });
         return { platform, signature, properties };
     }
 
-    function publishNode(instance: DeviceInstance, node: MatterNode) {
+    function publishNode(instance: DeviceInstance, node: MatterNode, force = false) {
         instance.platform.publishStatus(connected && node.available ? DeviceStatus.ready : DeviceStatus.disconnected);
         for (const [path, { definition, property }] of instance.properties) {
             if (definition.command === "time-zone" &&
                 storage.getItem(timeKey(String(node.node_id), definition.endpoint)) === unconfirmedTimeZone) continue;
             const value = propertyValue(definition, node.attributes[path]);
-            if (value !== undefined) property.setValue(value);
-            else if (node.attributes[path] === null) property.setValue("");
+            if (value !== undefined) publishProperty(property, value, force);
+            else if (node.attributes[path] === null) publishProperty(property, "", force);
         }
     }
 

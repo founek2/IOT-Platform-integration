@@ -255,6 +255,47 @@ Deno.test({
             const pairing = clients.find((client) => client.options.clientId === "mqttjs_matter");
             assert.ok(device);
             assert.ok(pairing);
+            const temperatureTopic = "v2/test/matter-matter-1/endpoint1/e1-c1026-a0";
+            const humidityTopic = "v2/test/matter-matter-1/endpoint1/e1-c1029-a0";
+            const stateTopic = "v2/test/matter-matter-1/$state";
+            const count = (topic: string) => publications.filter((p) => p.topic === topic).length;
+            const update = async (path: string, value: unknown) => {
+                const states = count(stateTopic);
+                sockets[0].send(JSON.stringify({ event: "attribute_updated", data: [1, path, value] }));
+                await waitFor(() => count(stateTopic) > states);
+            };
+            let now = performance.now() + 1000;
+            Object.defineProperty(performance, "now", { value: () => now, configurable: true });
+            try {
+                await update("1/1026/0", 2340);
+                now += 10_000;
+                await update("1/1029/0", 5070);
+                const temperatureCount = count(temperatureTopic);
+                const humidityCount = count(humidityTopic);
+                now += 49_999;
+                await update("1/1026/0", 2340);
+                assert.equal(count(temperatureTopic), temperatureCount);
+                assert.equal(count(humidityTopic), humidityCount);
+                now += 1;
+                await update("1/1026/0", 2340);
+                assert.equal(count(temperatureTopic), temperatureCount + 1);
+                assert.equal(count(humidityTopic), humidityCount);
+                now += 10_000;
+                await update("1/1029/0", 5070);
+                assert.equal(count(temperatureTopic), temperatureCount + 1);
+                assert.equal(count(humidityTopic), humidityCount + 1);
+                await update("1/1026/0", 2341);
+                assert.equal(publications.filter((p) => p.topic === temperatureTopic).at(-1)?.value, "23.41");
+                assert.equal(count(temperatureTopic), temperatureCount + 2);
+                await update("1/1026/0", null);
+                assert.equal(publications.filter((p) => p.topic === temperatureTopic).at(-1)?.value, "");
+                await update("1/1026/0", null);
+                assert.equal(count(temperatureTopic), temperatureCount + 3);
+                await update("1/1026/0", 2340);
+                assert.equal(count(temperatureTopic), temperatureCount + 4);
+            } finally {
+                Reflect.deleteProperty(performance, "now");
+            }
             const packet = { cmd: "publish" as const, topic: "", payload: Buffer.alloc(0), qos: 0 as const, dup: false, retain: false };
             const syncTopic = "v2/test/matter-matter-1/endpoint0-sync-time/power/set";
             const zoneTopic = "v2/test/matter-matter-1/endpoint0-sync-time/e0-c56-timezone/set";
@@ -352,8 +393,13 @@ Deno.test({
             await waitFor(() => publications.some((p) => p.topic.endsWith("/e1-c59-event1")));
             const added = clients.filter((client) => client.options.clientId === "mqttjs_matter-matter-2").at(-1)!;
             const eventCount = publications.filter((p) => p.topic.endsWith("/e1-c59-event1")).length;
+            sockets[0].send(JSON.stringify({ event: "node_event", data: {
+                node_id: 2, endpoint_id: 1, cluster_id: 59, event_id: 1, event_number: 1,
+                priority: 1, timestamp: 123, timestamp_type: 1, data: { newPosition: 1 },
+            } }));
+            await waitFor(() => publications.filter((p) => p.topic.endsWith("/e1-c59-event1")).length === eventCount + 1);
             added.emit("connect", { cmd: "connack", sessionPresent: false, returnCode: 0 });
-            assert.equal(publications.filter((p) => p.topic.endsWith("/e1-c59-event1")).length, eventCount);
+            assert.equal(publications.filter((p) => p.topic.endsWith("/e1-c59-event1")).length, eventCount + 1);
             sockets[0].send(JSON.stringify({ event: "node_removed", data: 2 }));
             await waitFor(() => added.disconnected);
             for (const [nodeId, commands, type, properties] of [
@@ -375,8 +421,12 @@ Deno.test({
             }
             sockets[0].close();
             await waitFor(() => sockets.length === 2, 7000);
-            await waitFor(() => publications.filter((p) => p.topic.endsWith("/e1-c1037-a0") && p.value === "2111").length >= 2);
+            const statesBeforeReconnect = count(stateTopic);
+            await waitFor(() => count(stateTopic) > statesBeforeReconnect);
             assert.equal(clients.filter((client) => client.options.clientId === "mqttjs_matter-matter-1").length, 1);
+            const temperaturesBeforeReconnect = count(temperatureTopic);
+            device.emit("connect", { cmd: "connack", sessionPresent: false, returnCode: 0 });
+            assert.equal(count(temperatureTopic), temperaturesBeforeReconnect + 1);
             await bridge.cleanUp();
             bridge = undefined;
             const dstCount = requests.filter((request) => request.args.command_name === "setDstOffset").length;
