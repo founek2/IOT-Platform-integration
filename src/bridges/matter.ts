@@ -44,6 +44,7 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
     let queue = Promise.resolve();
     let timeQueue = Promise.resolve();
     const lastPublications = new WeakMap<Property, { value: string; time: number }>();
+    const lastStatuses = new WeakMap<Platform, { value: DeviceStatus; time: number }>();
     const timeSchedules = new Map<string, { zone: TimeZone; timer?: ReturnType<typeof setTimeout> }>();
     const unconfirmedTimeZone = "unconfirmed";
 
@@ -54,6 +55,17 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
         property.setValue(value);
         if (property.client && property.propertyTopic && !property.client.disconnected && !property.client.disconnecting) {
             lastPublications.set(property, { value, time: now });
+        }
+    }
+
+    function publishDeviceStatus(platform: Platform, value: DeviceStatus, force = false) {
+        const now = performance.now();
+        const previous = lastStatuses.get(platform);
+        if (!force && previous && previous.value === value && platform.status === value &&
+            now - previous.time < REPEAT_INTERVAL) return;
+        platform.publishStatus(value);
+        if (platform.client && !platform.client.disconnected && !platform.client.disconnecting) {
+            lastStatuses.set(platform, { value, time: now });
         }
     }
 
@@ -252,6 +264,10 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
                 devices.set(id, instance);
                 try {
                     instance.platform.init();
+                    if (instance.platform.client && !instance.platform.client.disconnected &&
+                        !instance.platform.client.disconnecting) {
+                        lastStatuses.set(instance.platform, { value: instance.platform.status, time: performance.now() });
+                    }
                 } catch (error) {
                     if (instance.platform.client) await instance.platform.disconnect();
                     devices.delete(id);
@@ -405,7 +421,7 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
     }
 
     function publishNode(instance: DeviceInstance, node: MatterNode, force = false) {
-        instance.platform.publishStatus(connected && node.available ? DeviceStatus.ready : DeviceStatus.disconnected);
+        publishDeviceStatus(instance.platform, connected && node.available ? DeviceStatus.ready : DeviceStatus.disconnected, force);
         for (const [path, { definition, property }] of instance.properties) {
             if (definition.command === "time-zone" &&
                 storage.getItem(timeKey(String(node.node_id), definition.endpoint)) === unconfirmedTimeZone) continue;
@@ -419,7 +435,7 @@ export const factory: FactoryFn<MatterConfig> = (config, bridge, logger, storage
         connected = false;
         if (pairing.client) pairing.publishStatus(DeviceStatus.disconnected);
         for (const { platform } of devices.values()) {
-            if (platform.client) platform.publishStatus(DeviceStatus.disconnected);
+            if (platform.client) publishDeviceStatus(platform, DeviceStatus.disconnected);
         }
     }
 
